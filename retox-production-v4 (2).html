@@ -1,0 +1,2158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retox Production Management System</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'DM Sans', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f8fafc; }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.4s ease-out both; }
+    .slide-up { animation: slideUp 0.5s ease-out both; }
+    .del-1 { animation-delay: 0.05s; } .del-2 { animation-delay: 0.1s; } .del-3 { animation-delay: 0.15s; } .del-4 { animation-delay: 0.2s; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useMemo } = React;
+
+/* ═══════════════════════════════════════════════════
+   ICONS
+   ═══════════════════════════════════════════════════ */
+const I = {
+  Check: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>,
+  Clock: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+  Flask: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v6l-5 8a2 2 0 001.6 3.2h12.8a2 2 0 001.6-3.2l-5-8V3M9 3h6M9 3H7m8 0h2"/></svg>,
+  Drop: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>,
+  Beaker: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3h6M9 3v11.5l-4 7a2 2 0 001.732 3h10.536a2 2 0 001.732-3l-4-7V3"/></svg>,
+  Chart: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>,
+  File: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>,
+  Home: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>,
+  Dollar: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+  Search: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
+  LogOut: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>,
+  Download: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
+  Plus: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>,
+  Trash: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+  Archive: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>,
+  Box: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
+  Clipboard: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>,
+  Undo: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4"/></svg>,
+  Upload: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>,
+  Wine: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 2h8l-1 7H9L8 2zM9 9c0 3 2 5 3 5s3-2 3-5M12 14v7m-3 0h6"/></svg>,
+  Bottle: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 2h4v4l2 3v11a2 2 0 01-2 2h-4a2 2 0 01-2-2V9l2-3V2z"/></svg>,
+  Mountain: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 20l5.5-9 3.5 4 4-6L22 20H3z"/></svg>,
+  Printer: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>,
+  Cup: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3h10l-2 18H9L7 3zm-2 0h14"/></svg>,
+  ArrowUp: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>,
+  ClipCheck: ({c="w-6 h-6"}) => <svg className={c} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>,
+};
+
+/* ═══════════════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════════════ */
+const USERS = {
+  admin:   { password: 'admin123',  role: 'admin',      name: 'Admin' },
+  manager: { password: 'manager1',  role: 'manager',    name: 'Manager' },
+  worker1: { password: 'work1',     role: 'production', name: 'Worker 1' },
+  worker2: { password: 'work2',     role: 'production', name: 'Worker 2' },
+};
+
+const RECIPE_WINE_ABV = 24; // Recipes designed for 24% ABV agave wine
+const TARGET_ABV = 15;      // Final product target
+const GM_TO_LBS = 0.00220462;
+const LT_TO_GAL = 0.264172;
+
+// Master flavor list for Excel (no Cloud)
+const MASTER_FLAVORS = [
+  { code: 'AK-273-995-3', name: 'Nat Watermelon Flavor', qb: 'Flavor Watermelon' },
+  { code: 'FT-109-511-9', name: 'Nat Jalapeno Pepper Flavor WONF', qb: 'Flavor Jalapeno' },
+  { code: 'GC-981-040-9', name: 'TasteEssentials(TM) Nat Pink Grapefruit Flavor WONF', qb: 'NOT INVENTORY' },
+  { code: 'JP-715-472-8', name: 'Nat Lime with Chili Spice Flavor', qb: 'Flavor Chili Lime' },
+  { code: 'KO-225-580-4', name: 'TasteEssentials(TM) Nat Grapefruit Flavour', qb: 'NOT INVENTORY' },
+  { code: 'KY-142-159-4', name: 'Nat Strawberry Flavor', qb: 'Flavor Strawberry' },
+  { code: 'NB-210-437-0', name: 'Nat Passionfruit Flavor WONF', qb: 'Flavor Passionfruit (2)' },
+  { code: 'RI-343-529-9', name: 'Nat Mango Flavor WONF', qb: 'Flavor Mango' },
+  { code: 'SZ-129-620-1', name: 'Nat Passionfruit Flavor WONF', qb: 'Flavor Passionfruit' },
+  { code: 'TL-067-459-9', name: 'TasteEssentials Nat Orange Grapefruit Flavor  ', qb: 'Flavor Grapefruit' },
+  { code: 'UD-991-286-6', name: 'Nat Tequila Flavor Flavoring with other natural Flavorings', qb: 'Flavor Tequila' },
+  { code: 'VV-811-938-9', name: 'Nat Margarita Flavor Emulsion', qb: 'Flavor Margarita' },
+  { code: 'WE-846-251-0', name: 'Nat Pineapple Flavor WONF', qb: 'Flavor Pineapple' },
+  { code: 'XA-182-061-9', name: 'TasteEssentials Nat Lime Flavor', qb: 'Flavor Lime' },
+  { code: 'ZA-610-466-6', name: 'Nat Chili Poblano Pepper FlavorType', qb: 'Flavor Chili' },
+  { code: 'ZW-491-348-3', name: 'Nat Margarita Flavor WONF', qb: 'Flavor Margarita (2)' },
+  { code: 'CO304727', name: 'VEGEBRITE BLACK CARROT LWS', qb: 'Color Carrot' },
+  { code: 'CO205604', name: 'EmSeal Carotene Flavor Emulsion', qb: 'Flavor Carotene' },
+  { code: 'QL-120-634-1', name: 'Nat Smoke Flavor', qb: 'Flavor Smoke' },
+  { code: 'EX-156-932-1', name: 'Nat Capsicum Flavor', qb: 'Flavor Capsicum' },
+];
+
+const BULK_ITEMS = [
+  { code: 'CITRIC', name: 'CITRIC ACID', qb: 'NOT INVENTORY', unit: 'GM' },
+  { code: 'LIME-CONC', name: 'LIME JUICE CONCENTRATE CLARIFIED 450GPL', qb: 'Lime Juice', unit: 'GM' },
+  { code: 'SALT', name: 'SALT', qb: 'NOT INVENTORY', unit: 'GM' },
+  { code: 'SODIUM-CIT', name: 'SODIUM CITRATE', qb: 'NOT INVENTORY', unit: 'GM' },
+];
+
+// Bottling flavor options (maps to completed blend recipes)
+const BOTTLING_FLAVORS = [
+  { id: 'classic-margarita', name: 'Classic Lime Margarita', color: '#2563eb' },
+  { id: 'strawberry-margarita', name: 'Strawberry Margarita', color: '#dc2626' },
+  { id: 'watermelon-margarita', name: 'Watermelon Margarita', color: '#db2777' },
+  { id: 'paloma', name: 'Paloma', color: '#d97706' },
+  { id: 'passionfruit-margarita', name: 'Passionfruit Margarita', color: '#7c3aed' },
+  { id: 'mango-chili-margarita', name: 'Mango Chili Jalapeño Margarita', color: '#ea580c' },
+  { id: 'pineapple-margarita', name: 'Pineapple Margarita', color: '#eab308' },
+];
+
+// Screen printing cup products
+const SCREEN_PRINT_PRODUCTS = {
+  copa: {
+    label: 'Copa Cups',
+    items: [
+      { id: 'copa-chard', name: 'Chardonnay', color: '#eab308' },
+      { id: 'copa-cab', name: 'Cabernet Sauvignon', color: '#7f1d1d' },
+      { id: 'copa-merlot', name: 'Merlot', color: '#991b1b' },
+      { id: 'copa-riesling', name: 'Riesling', color: '#a3e635' },
+      { id: 'copa-pinot', name: 'Pinot Grigio', color: '#d4d4aa' },
+    ]
+  },
+  retox: {
+    label: 'Retox Cups',
+    items: [
+      { id: 'rx-lime', name: 'Classic Lime', color: '#22c55e' },
+      { id: 'rx-paloma', name: 'Paloma', color: '#d97706' },
+      { id: 'rx-watermelon', name: 'Watermelon', color: '#db2777' },
+      { id: 'rx-passion', name: 'Passion Fruit', color: '#7c3aed' },
+      { id: 'rx-mango', name: 'Mango', color: '#ea580c' },
+      { id: 'rx-pineapple', name: 'Pineapple', color: '#eab308' },
+      { id: 'rx-strawberry', name: 'Strawberry', color: '#dc2626' },
+    ]
+  }
+};
+
+// ══════ SUPPLIERS ══════
+const SUPPLIERS = [
+  { id: 'givaudan', name: 'Givaudan', category: 'Flavors', contact: '', items: ['All flavor codes (AK, FT, GC, JP, KO, KY, NB, RI, SZ, TL, UD, VV, WE, XA, ZA, ZW, CO, QL, EX)'] },
+  { id: 'h3', name: 'H3', category: 'Cups & Packaging', contact: '', items: ['Copa Pinch Waist (clear)', 'Retox Copa Feel Flat — 7 colors'] },
+  { id: 'gamer', name: 'Gamer', category: 'Caps & Foil', contact: '', items: ['Foil seals (Retox)', 'Foil seals (Copa)', 'Crown caps (Oregon Mountain)'] },
+  { id: 'john-baker', name: 'John Baker', category: 'Corrugated Boxes', contact: '', items: ['Retox cases', 'Copa cases', 'Oregon Mountain cases'] },
+];
+
+// Retox cup specs from H3 — Copa Feel Flat
+const RETOX_CUPS = [
+  { flavor: 'Classic Lime', h3Color: '2% Trans Green', hex: '#22c55e' },
+  { flavor: 'Strawberry', h3Color: '1% Crimson', hex: '#dc2626' },
+  { flavor: 'Watermelon', h3Color: 'Trans Red 185 C', hex: '#e11d48' },
+  { flavor: 'Passion Fruit', h3Color: '1% Trans Pink', hex: '#ec4899' },
+  { flavor: 'Paloma', h3Color: '1% EC Orange', hex: '#f97316' },
+  { flavor: 'Mango', h3Color: 'Trans Orange', hex: '#ea580c' },
+  { flavor: 'Pineapple', h3Color: '116 C Trans Yellow', hex: '#eab308' },
+];
+
+// Copa cup — single type
+const COPA_CUP = { name: 'Pinch Waist Clear', h3Color: 'Clear', hex: '#e2e8f0' };
+
+// All cups that Oregon Organic prints (for all brands)
+const ALL_PRINTABLE_CUPS = [
+  // Retox cups — Copa Feel Flat, 7 colors
+  ...RETOX_CUPS.map(c => ({ id: `rx-${c.flavor.toLowerCase().replace(/\s/g,'-')}`, name: `Retox — ${c.flavor}`, brand: 'Retox', color: c.hex, h3Color: c.h3Color })),
+  // Copa cups — Pinch Waist Clear, 5 varietals
+  ...SCREEN_PRINT_PRODUCTS.copa.items.map(c => ({ id: c.id, name: `Copa — ${c.name}`, brand: 'Copa', color: c.color, h3Color: 'Pinch Waist Clear' })),
+  // Oregon Mountain — if they have printed bottles/labels
+  { id: 'om-std', name: 'Oregon Mountain — Standard', brand: 'Oregon Mountain', color: '#059669', h3Color: 'Glass Stubby' },
+];
+
+// Packaging items for inventory tracking
+const PACKAGING_ITEMS = [
+  // Retox cups (7 colors)
+  ...RETOX_CUPS.map(c => ({ name: `Retox Cup — ${c.flavor} (${c.h3Color})`, unit: 'EA', supplier: 'H3', category: 'cups', reorderPoint: 5000 })),
+  // Copa cup
+  { name: 'Copa Cup — Pinch Waist Clear', unit: 'EA', supplier: 'H3', category: 'cups', reorderPoint: 5000 },
+  // Foil/Caps
+  { name: 'Foil Seals — Retox', unit: 'EA', supplier: 'Gamer', category: 'caps', reorderPoint: 5000 },
+  { name: 'Foil Seals — Copa', unit: 'EA', supplier: 'Gamer', category: 'caps', reorderPoint: 5000 },
+  { name: 'Crown Caps — Oregon Mountain', unit: 'EA', supplier: 'Gamer', category: 'caps', reorderPoint: 2000 },
+  { name: 'Glass Stubby Bottles — Oregon Mountain', unit: 'EA', supplier: '', category: 'bottles', reorderPoint: 2000 },
+  // Boxes
+  { name: 'Corrugated Box — Retox', unit: 'EA', supplier: 'John Baker', category: 'boxes', reorderPoint: 500 },
+  { name: 'Corrugated Box — Copa', unit: 'EA', supplier: 'John Baker', category: 'boxes', reorderPoint: 500 },
+  { name: 'Corrugated Box — Oregon Mountain', unit: 'EA', supplier: 'John Baker', category: 'boxes', reorderPoint: 500 },
+];
+const ALL_INVENTORY_ITEMS = [
+  ...MASTER_FLAVORS.map(f => ({ name: `${f.code} ${f.name}`, unit: 'GM', qb: f.qb, supplier: 'Givaudan', category: 'flavors', reorderPoint: 500 })),
+  { name: 'Bulk Wine - Agave', unit: 'LT', qb: 'IP-AG', supplier: '', category: 'bulk', reorderPoint: 1000 },
+  { name: 'Bulk Sugar', unit: 'GM', qb: 'Sugar', supplier: '', category: 'bulk', reorderPoint: 50000 },
+  ...BULK_ITEMS.map(b => ({ name: b.name, unit: b.unit, qb: b.qb, supplier: '', category: 'bulk', reorderPoint: 5000 })),
+  { name: 'FILTERED WATER', unit: 'LT', qb: 'NOT INVENTORY', supplier: '', category: 'bulk', reorderPoint: 0 },
+  ...PACKAGING_ITEMS,
+];
+
+// Recipes (no cloud flavor)
+const RECIPES = {
+  'classic-margarita': {
+    name: 'Classic Margarita', color: '#2563eb',
+    ingredients: [
+      { name: 'Agave Wine Base', amount: 625, unit: 'ml', code: 'BASE-001', qb: 'IP-AG', isWine: true },
+      { name: 'Nat Margarita Flavor Emulsion', amount: 2, unit: 'g', code: 'VV-811-938-9', qb: 'Flavor Margarita' },
+      { name: 'TasteEssentials Nat Lime Flavor', amount: 1, unit: 'g', code: 'XA-182-061-9', qb: 'Flavor Lime' },
+      { name: 'Nat Tequila Flavor', amount: 1, unit: 'g', code: 'UD-991-286-6', qb: 'Flavor Tequila' },
+      { name: 'Sucrose', amount: 74, unit: 'g', code: 'SUCROSE', qb: 'Sugar' },
+      { name: 'Citric Acid', amount: 3.6, unit: 'g', code: 'CITRIC', qb: 'NOT INVENTORY' },
+      { name: 'Lime Juice Concentrate 450GPL', amount: 2.4, unit: 'g', code: 'LIME-CONC', qb: 'Lime Juice' },
+      { name: 'Salt', amount: 0.2, unit: 'g', code: 'SALT', qb: 'NOT INVENTORY' },
+      { name: 'Sodium Citrate', amount: 0.5, unit: 'g', code: 'SODIUM-CIT', qb: 'NOT INVENTORY' },
+    ]
+  },
+  'strawberry-margarita': {
+    name: 'Strawberry Margarita', color: '#dc2626',
+    ingredients: [
+      { name: 'Agave Wine Base', amount: 625, unit: 'ml', code: 'BASE-001', qb: 'IP-AG', isWine: true },
+      { name: 'Nat Strawberry Flavor', amount: 2, unit: 'g', code: 'KY-142-159-4', qb: 'Flavor Strawberry' },
+      { name: 'TasteEssentials Nat Lime Flavor', amount: 1, unit: 'g', code: 'XA-182-061-9', qb: 'Flavor Lime' },
+      { name: 'Sucrose', amount: 74, unit: 'g', code: 'SUCROSE', qb: 'Sugar' },
+      { name: 'Citric Acid', amount: 3.6, unit: 'g', code: 'CITRIC', qb: 'NOT INVENTORY' },
+      { name: 'Lime Juice Concentrate 450GPL', amount: 2.4, unit: 'g', code: 'LIME-CONC', qb: 'Lime Juice' },
+      { name: 'Salt', amount: 0.2, unit: 'g', code: 'SALT', qb: 'NOT INVENTORY' },
+      { name: 'Sodium Citrate', amount: 0.5, unit: 'g', code: 'SODIUM-CIT', qb: 'NOT INVENTORY' },
+    ]
+  },
+  'watermelon-margarita': {
+    name: 'Watermelon Margarita', color: '#db2777',
+    ingredients: [
+      { name: 'Agave Wine Base', amount: 625, unit: 'ml', code: 'BASE-001', qb: 'IP-AG', isWine: true },
+      { name: 'Nat Watermelon Flavor', amount: 2, unit: 'g', code: 'AK-273-995-3', qb: 'Flavor Watermelon' },
+      { name: 'TasteEssentials Nat Lime Flavor', amount: 1, unit: 'g', code: 'XA-182-061-9', qb: 'Flavor Lime' },
+      { name: 'Sucrose', amount: 74, unit: 'g', code: 'SUCROSE', qb: 'Sugar' },
+      { name: 'Citric Acid', amount: 3.6, unit: 'g', code: 'CITRIC', qb: 'NOT INVENTORY' },
+      { name: 'Lime Juice Concentrate 450GPL', amount: 2.4, unit: 'g', code: 'LIME-CONC', qb: 'Lime Juice' },
+      { name: 'Salt', amount: 0.2, unit: 'g', code: 'SALT', qb: 'NOT INVENTORY' },
+      { name: 'Sodium Citrate', amount: 0.5, unit: 'g', code: 'SODIUM-CIT', qb: 'NOT INVENTORY' },
+    ]
+  },
+  'paloma': {
+    name: 'Paloma', color: '#d97706',
+    ingredients: [
+      { name: 'Agave Wine Base', amount: 625, unit: 'ml', code: 'BASE-001', qb: 'IP-AG', isWine: true },
+      { name: 'TasteEssentials Nat Orange Grapefruit Flavor', amount: 2, unit: 'g', code: 'TL-067-459-9', qb: 'Flavor Grapefruit' },
+      { name: 'TasteEssentials Nat Lime Flavor', amount: 1, unit: 'g', code: 'XA-182-061-9', qb: 'Flavor Lime' },
+      { name: 'Sucrose', amount: 74, unit: 'g', code: 'SUCROSE', qb: 'Sugar' },
+      { name: 'Citric Acid', amount: 3.6, unit: 'g', code: 'CITRIC', qb: 'NOT INVENTORY' },
+      { name: 'Lime Juice Concentrate 450GPL', amount: 2.4, unit: 'g', code: 'LIME-CONC', qb: 'Lime Juice' },
+      { name: 'Salt', amount: 0.2, unit: 'g', code: 'SALT', qb: 'NOT INVENTORY' },
+      { name: 'Sodium Citrate', amount: 0.5, unit: 'g', code: 'SODIUM-CIT', qb: 'NOT INVENTORY' },
+    ]
+  },
+  'passionfruit-margarita': {
+    name: 'Passionfruit Margarita', color: '#7c3aed',
+    ingredients: [
+      { name: 'Agave Wine Base', amount: 625, unit: 'ml', code: 'BASE-001', qb: 'IP-AG', isWine: true },
+      { name: 'Nat Passionfruit Flavor WONF', amount: 2, unit: 'g', code: 'NB-210-437-0', qb: 'Flavor Passionfruit' },
+      { name: 'TasteEssentials Nat Lime Flavor', amount: 1, unit: 'g', code: 'XA-182-061-9', qb: 'Flavor Lime' },
+      { name: 'Sucrose', amount: 74, unit: 'g', code: 'SUCROSE', qb: 'Sugar' },
+      { name: 'Citric Acid', amount: 3.6, unit: 'g', code: 'CITRIC', qb: 'NOT INVENTORY' },
+      { name: 'Lime Juice Concentrate 450GPL', amount: 2.4, unit: 'g', code: 'LIME-CONC', qb: 'Lime Juice' },
+      { name: 'Salt', amount: 0.2, unit: 'g', code: 'SALT', qb: 'NOT INVENTORY' },
+      { name: 'Sodium Citrate', amount: 0.5, unit: 'g', code: 'SODIUM-CIT', qb: 'NOT INVENTORY' },
+    ]
+  },
+  'mango-chili-margarita': {
+    name: 'Mango Chili Jalapeño Margarita', color: '#ea580c',
+    ingredients: [
+      { name: 'Agave Wine Base', amount: 625, unit: 'ml', code: 'BASE-001', qb: 'IP-AG', isWine: true },
+      { name: 'Nat Mango Flavor WONF', amount: 1.5, unit: 'g', code: 'RI-343-529-9', qb: 'Flavor Mango' },
+      { name: 'Nat Jalapeño Pepper Flavor WONF', amount: 0.5, unit: 'g', code: 'FT-109-511-9', qb: 'Flavor Jalapeno' },
+      { name: 'TasteEssentials Nat Lime Flavor', amount: 1, unit: 'g', code: 'XA-182-061-9', qb: 'Flavor Lime' },
+      { name: 'Sucrose', amount: 74, unit: 'g', code: 'SUCROSE', qb: 'Sugar' },
+      { name: 'Citric Acid', amount: 3.6, unit: 'g', code: 'CITRIC', qb: 'NOT INVENTORY' },
+      { name: 'Lime Juice Concentrate 450GPL', amount: 2.4, unit: 'g', code: 'LIME-CONC', qb: 'Lime Juice' },
+      { name: 'Salt', amount: 0.2, unit: 'g', code: 'SALT', qb: 'NOT INVENTORY' },
+      { name: 'Sodium Citrate', amount: 0.5, unit: 'g', code: 'SODIUM-CIT', qb: 'NOT INVENTORY' },
+    ]
+  }
+};
+
+/* ═══════════════════════════════════════════════════
+   BLENDING MATH
+   Wine comes in at 24% ABV, gets blended with water on arrival.
+   If actual wine ABV != 24%, adjust wine volume proportionally.
+   
+   adjusted_wine = recipe_wine * (RECIPE_WINE_ABV / actual_wine_abv)
+   
+   Volume estimation (winebusiness.com blending calc):
+   V_wine * ABV_wine = V_total * ABV_target
+   V_total = V_wine * ABV_wine / ABV_target
+   V_water = V_total - V_wine - V_sugar_displacement - V_misc_displacement
+   ═══════════════════════════════════════════════════ */
+function calcBlend(recipe, batchMult, wineAbv) {
+  const abv = wineAbv || RECIPE_WINE_ABV;
+  const wineIng = recipe.ingredients.find(i => i.isWine);
+  const baseWineMl = wineIng.amount * batchMult;
+  // Adjust wine for ABV difference: if wine is weaker, need more
+  const adjustedWineMl = baseWineMl * (RECIPE_WINE_ABV / abv);
+  const adjustedWineLt = adjustedWineMl / 1000;
+  
+  // Sugar and misc
+  const sugarGm = (recipe.ingredients.find(i => i.code === 'SUCROSE')?.amount || 0) * batchMult;
+  const miscGm = recipe.ingredients.filter(i => !i.isWine && i.code !== 'SUCROSE' && i.unit === 'g')
+    .reduce((s, i) => s + i.amount * batchMult, 0);
+  
+  const wineGal = adjustedWineLt * LT_TO_GAL;
+  const sugarLbs = sugarGm * GM_TO_LBS;
+  const miscLbs = miscGm * GM_TO_LBS;
+  const sugarGalDisp = sugarLbs * 0.075;
+  const miscGalDisp = miscLbs * 0.075;
+  
+  // Total volume from ABV blending: V_wine * wine_abv = V_total * target_abv
+  const totalGal = (wineGal * abv) / TARGET_ABV;
+  const waterGal = totalGal - wineGal - sugarGalDisp - miscGalDisp;
+  const waterLt = Math.max(0, waterGal / LT_TO_GAL);
+  
+  return {
+    adjustedWineLt, adjustedWineMl, wineGal,
+    sugarGm, sugarLbs, miscGm, miscLbs,
+    sugarGalDisp, miscGalDisp,
+    waterLt, waterGal: Math.max(0, waterGal),
+    totalGal, totalLt: totalGal / LT_TO_GAL,
+    abvChange: ((RECIPE_WINE_ABV - abv) / RECIPE_WINE_ABV * 100),
+    wineChange: ((adjustedWineMl - baseWineMl) / baseWineMl * 100),
+  };
+}
+
+/* ═══════════════════════════════════════════════════
+   STORAGE
+   ═══════════════════════════════════════════════════ */
+const SS = {
+  s: (k,v) => localStorage.setItem('rx_'+k, JSON.stringify(v)),
+  l: (k,d) => { try { const v=localStorage.getItem('rx_'+k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  allWO: () => SS.l('wo', []),
+  saveWO: (wo) => { const a=SS.allWO(); a.push(wo); SS.s('wo',a); },
+  updateWO: (wo) => { const a=SS.allWO(); const i=a.findIndex(x=>x.id===wo.id); if(i!==-1){a[i]=wo; SS.s('wo',a);} },
+  mats: () => SS.l('mats', []),
+  saveMats: (m) => SS.s('mats', m),
+  invs: () => SS.l('invs', []),
+  saveInvs: (v) => SS.s('invs', v),
+  inventory: () => SS.l('inventory', []),
+  saveInventory: (v) => SS.s('inventory', v),
+  invReports: () => SS.l('inv_reports', []),
+  saveInvReports: (v) => SS.s('inv_reports', v),
+  // Bottling orders
+  allBottling: () => SS.l('bottling', []),
+  saveBottling: (b) => { const a=SS.l('bottling',[]); a.push(b); SS.s('bottling',a); },
+  updateBottling: (b) => { const a=SS.l('bottling',[]); const i=a.findIndex(x=>x.id===b.id); if(i!==-1){a[i]=b;SS.s('bottling',a);} },
+  // Generic work orders for Copa, Oregon Mountain, Screen Printing
+  allGenericWO: (type) => SS.l(`gwo_${type}`, []),
+  saveGenericWO: (type, w) => { const a=SS.l(`gwo_${type}`,[]); a.push(w); SS.s(`gwo_${type}`,a); },
+  updateGenericWO: (type, w) => { const a=SS.l(`gwo_${type}`,[]); const i=a.findIndex(x=>x.id===w.id); if(i!==-1){a[i]=w;SS.s(`gwo_${type}`,a);} },
+  // Oregon Organic print logs & transfers
+  printLogs: () => SS.l('print_logs', []),
+  savePrintLog: (log) => { const a=SS.l('print_logs',[]); a.push(log); SS.s('print_logs',a); },
+  printedStock: () => SS.l('printed_stock', []),
+  savePrintedStock: (v) => SS.s('printed_stock', v),
+  transfers: () => SS.l('cup_transfers', []),
+  saveTransfer: (t) => { const a=SS.l('cup_transfers',[]); a.push(t); SS.s('cup_transfers',a); },
+};
+
+/* ═══════════════════════════════════════════════════
+   EXCEL BLEND REPORT - Matches lime blend exactly
+   ═══════════════════════════════════════════════════ */
+function generateBlendReport(wo) {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([]);
+  
+  const numFmt5 = '_(* #,##0.00000_);_(* (#,##0.00000);_(* "-"??_);_(@_)';
+  const numFmt2 = '_(* #,##0.00_);_(* (#,##0.00);_(* "-"??_);_(@_)';
+  const textFmt = '@';
+  const dateFmt = 'mm/dd/yy;@';
+  
+  function setCell(addr, val, opts={}) {
+    const cell = { v: val, t: typeof val === 'number' ? 'n' : (val instanceof Date ? 'd' : 's') };
+    if (opts.f) { cell.f = opts.f; delete cell.v; cell.t = 'n'; }
+    if (opts.z) cell.z = opts.z;
+    if (opts.s) cell.s = opts.s;
+    ws[addr] = cell;
+  }
+  
+  // Wine and water actuals
+  const wineIng = wo.ingredients.find(i => i.isWine);
+  const sugarIng = wo.ingredients.find(i => i.code === 'SUCROSE');
+  const wineLT = wineIng ? (wineIng.actualAmount != null ? wineIng.actualAmount/1000 : wineIng.targetAmount/1000) : 0;
+  const sugarGM = sugarIng ? (sugarIng.actualAmount || sugarIng.targetAmount) : 0;
+  const waterLT = wo.waterAdded || 0;
+  
+  // Calculate gallon totals matching the lime blend formulas
+  const wineGal = wineLT * LT_TO_GAL;
+  const waterGal = waterLT * LT_TO_GAL;
+  const sugarLbs = sugarGM * GM_TO_LBS;
+  
+  // Misc = all flavor/additive grams (master flavors + bulk items except sugar, wine, water)
+  const miscIngredients = wo.ingredients.filter(i => !i.isWine && i.code !== 'SUCROSE' && i.unit !== 'ml');
+  const miscLbs = miscIngredients.reduce((s, i) => {
+    const qty = i.actualAmount != null ? i.actualAmount : i.targetAmount;
+    return s + qty * GM_TO_LBS;
+  }, 0);
+  
+  const totalGal = wineGal + waterGal + (sugarLbs * 0.075) + (miscLbs * 0.075);
+  const totalLiters = totalGal * 3.78541;
+  const blendDate = wo.completedAt ? new Date(wo.completedAt) : new Date();
+  
+  // Row 1: Title (B1:G1 merged)
+  setCell('B1', 'Retox Blend Production Report');
+  
+  // Row 3: Headers
+  setCell('B3', 'Type'); setCell('C3', 'Date', {z: dateFmt});
+  setCell('D3', 'Liters'); setCell('F3', 'Gallons');
+  
+  // Row 4: Values
+  setCell('B4', wo.recipeName);
+  setCell('C4', blendDate, {z: dateFmt});
+  setCell('D4', totalLiters, {z: '0.00000'});
+  setCell('F4', totalGal, {z: '0.00000'});
+  
+  // Row 6: Column headers
+  setCell('B6', 'Item Description', {z: textFmt});
+  setCell('C6', ' U/M', {z: numFmt5});
+  setCell('D6', 'QTY', {z: numFmt5});
+  setCell('E6', 'QB Item', {z: textFmt});
+  setCell('F6', 'QB U/M', {z: numFmt5});
+  setCell('G6', 'QB QTY', {z: numFmt5});
+  
+  // Flavor rows (7-27, matching original row numbers, minus cloud = 20 items)
+  let row = 7;
+  MASTER_FLAVORS.forEach(mf => {
+    const woIng = wo.ingredients.find(i => i.code === mf.code);
+    const qty = woIng ? (woIng.actualAmount != null ? woIng.actualAmount : woIng.targetAmount) : 0;
+    const qbQty = qty * GM_TO_LBS;
+    const r = row;
+    setCell(`B${r}`, `${mf.code} ${mf.name}`, {z: textFmt});
+    setCell(`C${r}`, 'GM', {z: numFmt5});
+    const qtyFmt = qty > 0 ? numFmt2 : numFmt5;
+    setCell(`D${r}`, qty, {z: qtyFmt});
+    setCell(`E${r}`, mf.qb, {z: textFmt});
+    setCell(`F${r}`, 'LBS', {z: numFmt5});
+    setCell(`G${r}`, qbQty, {z: numFmt5});
+    row++;
+  });
+  
+  // Bulk Wine
+  const bwRow = row;
+  setCell(`B${bwRow}`, 'Bulk Wine - Agave', {z: textFmt});
+  setCell(`C${bwRow}`, 'LT', {z: numFmt5});
+  setCell(`D${bwRow}`, wineLT, {z: numFmt2});
+  setCell(`E${bwRow}`, 'IP-AG', {z: textFmt});
+  setCell(`F${bwRow}`, 'GAL', {z: numFmt5});
+  setCell(`G${bwRow}`, wineGal, {z: numFmt5});
+  row++;
+  
+  // Bulk Sugar
+  const bsRow = row;
+  setCell(`B${bsRow}`, 'Bulk Sugar', {z: textFmt});
+  setCell(`C${bsRow}`, 'GM', {z: numFmt5});
+  setCell(`D${bsRow}`, sugarGM, {z: numFmt2});
+  setCell(`E${bsRow}`, 'Sugar', {z: textFmt});
+  setCell(`F${bsRow}`, 'LBS', {z: numFmt5});
+  setCell(`G${bsRow}`, sugarLbs, {z: numFmt5});
+  row++;
+  
+  // Bulk items (Citric, Lime Juice, Salt, Sodium Citrate)
+  const bulkStartRow = row;
+  BULK_ITEMS.forEach(bi => {
+    const woIng = wo.ingredients.find(i => i.code === bi.code);
+    const qty = woIng ? (woIng.actualAmount != null ? woIng.actualAmount : woIng.targetAmount) : 0;
+    const r = row;
+    setCell(`B${r}`, bi.name, {z: textFmt});
+    setCell(`C${r}`, 'GM', {z: numFmt5});
+    setCell(`D${r}`, qty, {z: numFmt2});
+    setCell(`E${r}`, bi.qb, {z: textFmt});
+    setCell(`F${r}`, 'LBS', {z: numFmt5});
+    setCell(`G${r}`, qty * GM_TO_LBS, {z: numFmt5});
+    row++;
+  });
+  const bulkEndRow = row - 1;
+  
+  // Filtered Water
+  const wRow = row;
+  setCell(`B${wRow}`, 'FILTERED WATER', {z: textFmt});
+  setCell(`C${wRow}`, 'LT', {z: numFmt5});
+  setCell(`D${wRow}`, waterLT, {z: numFmt2});
+  setCell(`E${wRow}`, 'NOT INVENTORY', {z: textFmt});
+  setCell(`F${wRow}`, 'GAL', {z: numFmt5});
+  setCell(`G${wRow}`, waterGal, {z: numFmt5});
+  row += 2; // blank row
+  
+  // Summary section
+  const sumStart = row;
+  setCell(`B${row}`, 'Type'); setCell(`D${row}`, 'Gallons', {z: numFmt2});
+  row++;
+  setCell(`B${row}`, 'Agave Wine Added'); setCell(`D${row}`, wineGal, {z: numFmt5});
+  row++;
+  setCell(`B${row}`, 'Water Added'); setCell(`D${row}`, waterGal, {z: numFmt5});
+  row++;
+  setCell(`B${row}`, 'Sugar LBS x 0.075'); setCell(`D${row}`, sugarLbs * 0.075, {z: numFmt5});
+  row++;
+  setCell(`B${row}`, 'Misc LBS x 0.075'); setCell(`D${row}`, miscLbs * 0.075, {z: numFmt5});
+  row++;
+  setCell(`B${row}`, 'Total Gallons Blend'); setCell(`D${row}`, totalGal, {z: numFmt5});
+  
+  // Set range
+  ws['!ref'] = `A1:G${row}`;
+  
+  // Column widths matching original
+  ws['!cols'] = [
+    {wch: 4.71}, {wch: 60.71}, {wch: 9}, {wch: 14}, {wch: 19.29}, {wch: 9.71}, {wch: 11.71}
+  ];
+  
+  // Merges matching original
+  ws['!merges'] = [
+    {s:{r:0,c:1}, e:{r:0,c:6}},  // B1:G1 title
+    {s:{r:2,c:3}, e:{r:2,c:4}},  // D3:E3 Liters header
+    {s:{r:2,c:5}, e:{r:2,c:6}},  // F3:G3 Gallons header
+    {s:{r:3,c:3}, e:{r:3,c:4}},  // D4:E4 Liters value
+    {s:{r:3,c:5}, e:{r:3,c:6}},  // F4:G4 Gallons value
+    // Summary merges
+    {s:{r:sumStart-1,c:1}, e:{r:sumStart-1,c:2}},
+    {s:{r:sumStart,c:1}, e:{r:sumStart,c:2}},
+    {s:{r:sumStart+1,c:1}, e:{r:sumStart+1,c:2}},
+    {s:{r:sumStart+2,c:1}, e:{r:sumStart+2,c:2}},
+    {s:{r:sumStart+3,c:1}, e:{r:sumStart+3,c:2}},
+    {s:{r:sumStart+4,c:1}, e:{r:sumStart+4,c:2}},
+  ];
+  
+  XLSX.utils.book_append_sheet(wb, ws, 'Blend Report');
+  const d = blendDate.toISOString().split('T')[0].replace(/-/g, '_');
+  XLSX.writeFile(wb, `${d}_${wo.recipeName.replace(/\s+/g, '_')}_Blend.xlsx`);
+}
+
+/* ═══════════════════════════════════════════════════
+   MAIN APP
+   ═══════════════════════════════════════════════════ */
+function App() {
+  const [user, setUser] = useState(null);
+  const [view, setView] = useState('widgets'); // start at widgets
+  const [wo, setWo] = useState(null);
+  const [step, setStep] = useState(-1);
+  const [qcData, setQcData] = useState({});
+  const [orders, setOrders] = useState([]);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [mats, setMats] = useState([]);
+  const [invs, setInvs] = useState([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [bottlingOrders, setBottlingOrders] = useState([]);
+  const [copaOrders, setCopaOrders] = useState([]);
+  const [oregonOrders, setOregonOrders] = useState([]);
+  const [screenOrders, setScreenOrders] = useState([]);
+  const [printLogs, setPrintLogs] = useState([]);
+  const [printedStock, setPrintedStock] = useState([]);
+  const [cupTransfers, setCupTransfers] = useState([]);
+  
+  useEffect(() => { setOrders(SS.allWO()); setMats(SS.mats()); setInvs(SS.invs()); setBottlingOrders(SS.allBottling()); setCopaOrders(SS.allGenericWO('copa')); setOregonOrders(SS.allGenericWO('oregon')); setScreenOrders(SS.allGenericWO('screen')); setPrintLogs(SS.printLogs()); setPrintedStock(SS.printedStock()); setCupTransfers(SS.transfers()); }, []);
+  const refresh = () => { setOrders(SS.allWO()); setBottlingOrders(SS.allBottling()); setCopaOrders(SS.allGenericWO('copa')); setOregonOrders(SS.allGenericWO('oregon')); setScreenOrders(SS.allGenericWO('screen')); setPrintLogs(SS.printLogs()); setPrintedStock(SS.printedStock()); setCupTransfers(SS.transfers()); };
+  const isAdmin = user?.role === 'admin';
+  const isMgr = user?.role === 'admin' || user?.role === 'manager';
+  
+  // ── Auth ──
+  const login = (u,p) => { const x=USERS[u]; if(x&&x.password===p){setUser({username:u,...x});setView('widgets');return true;} return false; };
+  const logout = () => { setUser(null); setView('widgets'); setWo(null); setStep(-1); };
+  
+  // ── StatusBadge ──
+  const Badge = ({s}) => {
+    const m = {completed:'bg-emerald-50 text-emerald-700 border-emerald-200','in-progress':'bg-blue-50 text-blue-700 border-blue-200','qc-pending':'bg-violet-50 text-violet-700 border-violet-200',pending:'bg-amber-50 text-amber-700 border-amber-200',deleted:'bg-red-50 text-red-400 border-red-200'};
+    const l = {completed:'Completed','in-progress':'In Progress','qc-pending':'QC Pending',pending:'Pending',deleted:'Deleted'};
+    return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${m[s]||m.pending}`}>{l[s]||s}</span>;
+  };
+  
+  // ── Dual unit helpers ──
+  const gToLbs = g => (g * GM_TO_LBS).toFixed(5);
+  const mlToLt = ml => (ml / 1000).toFixed(3);
+  const ltToGal = lt => (lt * LT_TO_GAL).toFixed(5);
+  const mlToGal = ml => (ml / 1000 * LT_TO_GAL).toFixed(5);
+  
+  /* ═══════════════════════════════════════════════════
+     LOGIN
+     ═══════════════════════════════════════════════════ */
+  if (!user) {
+    const Login = () => {
+      const [un,setUn]=useState(''); const [pw,setPw]=useState(''); const [err,setErr]=useState(''); const [ld,setLd]=useState(false);
+      const go = e => { e.preventDefault(); setLd(true); setErr(''); setTimeout(()=>{if(!login(un,pw))setErr('Invalid credentials');setLd(false);},400); };
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-white flex items-center justify-center p-6">
+          <div className="w-full max-w-sm fade-in">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg shadow-blue-600/25 mb-5"><I.Flask c="w-8 h-8 text-white"/></div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">RETOX</h1>
+              <p className="text-slate-400 text-sm font-medium tracking-wide mt-1">PRODUCTION MANAGEMENT</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8">
+              <h2 className="text-lg font-bold text-slate-800 mb-1">Welcome back</h2>
+              <p className="text-slate-400 text-sm mb-6">Sign in to continue</p>
+              <form onSubmit={go} className="space-y-4">
+                <div><label className="block text-sm font-semibold text-slate-600 mb-1.5">Username</label><input type="text" value={un} onChange={e=>setUn(e.target.value)} placeholder="Enter username" className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white focus:outline-none transition-all"/></div>
+                <div><label className="block text-sm font-semibold text-slate-600 mb-1.5">Password</label><input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Enter password" className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white focus:outline-none transition-all"/></div>
+                {err && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-2.5 fade-in">{err}</div>}
+                <button type="submit" disabled={!un||!pw||ld} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/25 disabled:opacity-40 transition-all">{ld?'Signing in...':'Sign In'}</button>
+              </form>
+            </div>
+            <div className="mt-6 text-center"><p className="text-xs text-slate-400"><span className="font-medium text-slate-500">admin</span>/admin123 · <span className="font-medium text-slate-500">manager</span>/manager1 · <span className="font-medium text-slate-500">worker1</span>/work1</p></div>
+          </div>
+        </div>
+      );
+    };
+    return <Login />;
+  }
+  
+  // ── Header ──
+  const Hdr = () => (
+    <div className="bg-white border-b border-slate-100 sticky top-0 z-50">
+      <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={()=>setView('widgets')}>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm"><I.Flask c="w-4 h-4 text-white"/></div>
+          <div><div className="text-sm font-extrabold text-slate-800 tracking-tight leading-none">RETOX</div><div className="text-[10px] text-slate-400 font-medium tracking-wider">PRODUCTION</div></div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right"><div className="text-xs font-semibold text-slate-700">{user.name}</div><div className="text-[10px] text-slate-400 capitalize">{user.role}</div></div>
+          <button onClick={logout} className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"><I.LogOut c="w-4 h-4"/></button>
+        </div>
+      </div>
+    </div>
+  );
+  
+  // ── NavBar ──
+  const Nav = () => {
+    const qcCount = orders.filter(o=>o.status==='qc-pending').length;
+    const tabs = [
+      {id:'widgets',label:'Home',icon:I.Home,show:true},
+      {id:'dashboard',label:'Dashboard',icon:I.Chart,show:isAdmin},
+      {id:'costs',label:'Costs',icon:I.Dollar,show:isAdmin},
+      {id:'inventory',label:'Inventory',icon:I.Box,show:isAdmin},
+      {id:'history',label:'History',icon:I.File,show:isMgr},
+      {id:'qc-queue',label:'QC',icon:I.Beaker,show:isMgr,badge:qcCount},
+    ].filter(t=>t.show);
+    return (
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-50">
+        <div className="max-w-lg mx-auto px-1 py-2">
+          <div className="grid gap-0.5" style={{gridTemplateColumns:`repeat(${tabs.length},1fr)`}}>
+            {tabs.map(t=>(
+              <button key={t.id} onClick={()=>setView(t.id)} className={`flex flex-col items-center gap-0.5 py-1.5 px-0.5 rounded-xl transition-all relative ${view===t.id?'bg-blue-50 text-blue-600':'text-slate-400 hover:text-slate-600'}`}>
+                <t.icon c="w-5 h-5"/><span className="text-[9px] font-semibold">{t.label}</span>
+                {t.badge>0&&<div className="absolute top-0.5 right-1 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold">{t.badge}</div>}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  /* ═══════════════════════════════════════════════════
+     WIDGETS HOME
+     ═══════════════════════════════════════════════════ */
+  if (view === 'widgets') {
+    const widgets = [
+      { id: 'retox', label: 'RETOX', sub: 'Blending & Bottling', icon: I.Flask, color: 'from-blue-600 to-blue-700', shadow: 'shadow-blue-600/20', show: true, target: 'home',
+        stats: [
+          {n: orders.filter(o=>!o.deleted&&o.status==='pending').length, l:'Blend', c:'amber'},
+          {n: orders.filter(o=>!o.deleted&&o.status==='in-progress').length, l:'Active', c:'blue'},
+          {n: bottlingOrders.filter(o=>!o.deleted&&o.status!=='completed').length, l:'Bottling', c:'violet'},
+        ]},
+      { id: 'copa', label: 'COPA', sub: 'Bottling Work Orders', icon: I.Wine, color: 'from-rose-500 to-rose-600', shadow: 'shadow-rose-500/20', show: isMgr, target: 'copa-home',
+        stats: [{n: copaOrders.filter(o=>!o.deleted).length, l:'Orders', c:'rose'}] },
+      { id: 'oregon', label: 'OREGON MOUNTAIN', sub: 'Bottling Work Orders', icon: I.Mountain, color: 'from-emerald-600 to-emerald-700', shadow: 'shadow-emerald-600/20', show: isMgr, target: 'oregon-home',
+        stats: [{n: oregonOrders.filter(o=>!o.deleted).length, l:'Orders', c:'emerald'}] },
+      { id: 'screen', label: 'OREGON ORGANIC', sub: 'Screen Printing Production', icon: I.Printer, color: 'from-violet-600 to-violet-700', shadow: 'shadow-violet-600/20', show: isMgr, target: 'screen-home',
+        stats: [{n: screenOrders.filter(o=>!o.deleted).length, l:'Orders', c:'violet'}] },
+    ].filter(w => w.show);
+    
+    return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-8">
+      <div className="mb-8 fade-in"><h1 className="text-2xl font-extrabold text-slate-800">Hello, {user.name}</h1><p className="text-slate-400 text-sm mt-1">Select a product to manage</p></div>
+      <div className="space-y-4">
+        {widgets.map((w,i) => (
+          <button key={w.id} onClick={() => setView(w.target)} className={`w-full fade-in del-${Math.min(i+1,4)}`}>
+            <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-md hover:shadow-lg hover:border-blue-200 transition-all active:scale-[0.98] text-left">
+              <div className="flex items-center gap-4">
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${w.color} flex items-center justify-center shadow-lg ${w.shadow}`}><w.icon c="w-7 h-7 text-white"/></div>
+                <div className="flex-1"><div className="text-lg font-extrabold text-slate-800 tracking-tight">{w.label}</div><div className="text-sm text-slate-400">{w.sub}</div></div>
+                <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+              </div>
+              {w.stats && w.stats.length > 0 && (<div className={`mt-3 grid gap-2`} style={{gridTemplateColumns:`repeat(${w.stats.length},1fr)`}}>
+                {w.stats.map((s,si)=>(<div key={si} className={`bg-${s.c}-50 rounded-lg p-2 text-center`}><div className={`text-lg font-extrabold text-${s.c}-600`}>{s.n}</div><div className={`text-[9px] text-${s.c}-500 font-semibold`}>{s.l}</div></div>))}
+              </div>)}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div></div><Nav/></>);
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     RETOX HOME (Blend + Bottling)
+     ═══════════════════════════════════════════════════ */
+  if (view === 'home') {
+    const RetoxHome = () => {
+      const [tab, setTab] = useState('blend');
+      const activeBlends = orders.filter(o => !o.deleted && (o.status==='pending'||o.status==='in-progress'));
+      const activeBottling = bottlingOrders.filter(o => !o.deleted && o.status !== 'completed');
+      // Available blend inventory (completed blends not yet fully bottled)
+      const completedBlends = orders.filter(o => o.status === 'completed' && !o.deleted);
+      
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-6">
+        <button onClick={()=>setView('widgets')} className="text-xs text-slate-400 hover:text-blue-600 mb-2">← Back to Products</button>
+        <h1 className="text-2xl font-extrabold text-slate-800 mb-4">RETOX Production</h1>
+        
+        {/* Tabs */}
+        <div className="flex gap-2 mb-5">
+          <button onClick={()=>setTab('blend')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab==='blend'?'bg-blue-600 text-white shadow-lg shadow-blue-600/20':'bg-white text-slate-500 border border-slate-200'}`}>
+            <span className="flex items-center justify-center gap-1.5"><I.Flask c="w-4 h-4"/> Blending</span>
+          </button>
+          <button onClick={()=>setTab('bottling')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab==='bottling'?'bg-blue-600 text-white shadow-lg shadow-blue-600/20':'bg-white text-slate-500 border border-slate-200'}`}>
+            <span className="flex items-center justify-center gap-1.5"><I.Bottle c="w-4 h-4"/> Bottling</span>
+          </button>
+        </div>
+        
+        {/* BLEND TAB */}
+        {tab === 'blend' && (<>
+          {isMgr && <button onClick={()=>setView('create')} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98] text-sm mb-5 fade-in">+ Create Blend Order</button>}
+          <div className="mb-3"><h2 className="text-sm font-bold text-slate-700">Active Blend Orders</h2></div>
+          <div className="space-y-3">
+            {activeBlends.map(o => (
+              <div key={o.id} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm fade-in">
+                <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:o.recipeColor}}/><span className="font-mono text-xs text-slate-400">{o.id}</span></div><Badge s={o.status}/></div>
+                <div className="text-slate-800 font-bold text-sm mb-1">{o.recipeName}</div>
+                <div className="text-slate-400 text-xs mb-3">{o.batchSize}x · Assigned to {o.assignee}</div>
+                {o.status==='pending' && <button onClick={()=>{const u={...o,status:'in-progress',startedAt:new Date().toISOString()};SS.updateWO(u);setWo(u);setStep(-1);refresh();setView('production');}} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-all">Start Production</button>}
+                {o.status==='in-progress' && <button onClick={()=>{setWo(o);setStep(o.wineAbv?(o.ingredients.findIndex(i=>i.actualAmount==null)>=0?o.ingredients.findIndex(i=>i.actualAmount==null):0):-1);setView('production');}} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-all">Continue Production</button>}
+              </div>
+            ))}
+            {activeBlends.length===0 && <div className="text-center py-12 fade-in"><I.Clock c="w-8 h-8 mx-auto mb-2 text-slate-300"/><div className="text-slate-400 text-xs">No active blend orders</div></div>}
+          </div>
+        </>)}
+        
+        {/* BOTTLING TAB */}
+        {tab === 'bottling' && (<>
+          {isMgr && <button onClick={()=>setView('create-bottling')} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98] text-sm mb-5 fade-in">+ Create Bottling Order</button>}
+          
+          {/* Available blend inventory */}
+          {completedBlends.length > 0 && (<div className="mb-5"><div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Available Blend Inventory</div>
+            <div className="grid grid-cols-2 gap-2">{BOTTLING_FLAVORS.map(f => {
+              const available = completedBlends.filter(b => b.recipe === f.id);
+              const totalBatches = available.length;
+              if (totalBatches === 0) return null;
+              return (<div key={f.id} className="bg-white rounded-lg p-3 border border-slate-100"><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{backgroundColor:f.color}}/><span className="text-xs font-semibold text-slate-700">{f.name.split(' ').slice(0,2).join(' ')}</span></div><div className="text-lg font-extrabold text-slate-800 mt-1">{totalBatches}</div><div className="text-[10px] text-slate-400">completed blend{totalBatches!==1?'s':''}</div></div>);
+            })}</div>
+          </div>)}
+          
+          <div className="mb-3"><h2 className="text-sm font-bold text-slate-700">Bottling Orders</h2></div>
+          <div className="space-y-3">
+            {activeBottling.map(o => (
+              <div key={o.id} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm fade-in">
+                <div className="flex items-center justify-between mb-2"><span className="font-mono text-xs text-slate-400">{o.id}</span><Badge s={o.status}/></div>
+                <div className="text-slate-800 font-bold text-sm mb-1">{o.flavorName}</div>
+                <div className="text-slate-400 text-xs">{o.quantity} units · {o.assignee} · {new Date(o.createdAt).toLocaleDateString()}</div>
+              </div>
+            ))}
+            {activeBottling.length===0 && <div className="text-center py-12 fade-in"><I.Bottle c="w-8 h-8 mx-auto mb-2 text-slate-300"/><div className="text-slate-400 text-xs">No active bottling orders</div></div>}
+          </div>
+        </>)}
+      </div></div><Nav/></>);
+    };
+    return <RetoxHome/>;
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     CREATE BOTTLING ORDER (pulls from completed blends)
+     ═══════════════════════════════════════════════════ */
+  if (view === 'create-bottling' && isMgr) {
+    const BottlingForm = () => {
+      const [flavor, setFlavor] = useState('');
+      const [qty, setQty] = useState('');
+      const [asgn, setAsgn] = useState('');
+      const completedBlends = orders.filter(o => o.status === 'completed' && !o.deleted);
+      
+      // Group available blends by recipe
+      const availableByRecipe = {};
+      completedBlends.forEach(b => {
+        if (!availableByRecipe[b.recipe]) availableByRecipe[b.recipe] = [];
+        availableByRecipe[b.recipe].push(b);
+      });
+      
+      const createBottling = () => {
+        const fl = BOTTLING_FLAVORS.find(f => f.id === flavor);
+        const bo = {
+          id: `BO-${Date.now()}`, flavor, flavorName: fl.name, flavorColor: fl.color,
+          quantity: parseInt(qty), assignee: asgn, status: 'pending', deleted: false,
+          createdAt: new Date().toISOString(),
+          sourceBlends: (availableByRecipe[flavor] || []).map(b => b.id),
+        };
+        SS.saveBottling(bo); refresh(); setView('home');
+      };
+      
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-6">
+        <button onClick={()=>setView('home')} className="text-slate-400 hover:text-blue-600 mb-5 flex items-center gap-1 text-sm font-medium">← Back</button>
+        <h2 className="text-2xl font-extrabold text-slate-800 mb-6 flex items-center gap-2"><I.Bottle c="w-6 h-6 text-blue-500"/> Create Bottling Order</h2>
+        
+        <div className="mb-5"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Flavor</label>
+          <div className="space-y-2">{BOTTLING_FLAVORS.map(f => {
+            const avail = (availableByRecipe[f.id] || []).length;
+            return (<button key={f.id} onClick={()=>setFlavor(f.id)} className={`w-full p-3.5 rounded-xl transition-all text-left ${flavor===f.id?'bg-blue-50 border-2 border-blue-500':'bg-white border border-slate-200 hover:border-slate-300'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:f.color}}/><span className="text-sm font-semibold text-slate-700">{f.name}</span></div>
+                <span className={`text-xs font-bold ${avail>0?'text-emerald-600':'text-slate-300'}`}>{avail} blend{avail!==1?'s':''} available</span>
+              </div>
+            </button>);
+          })}</div>
+        </div>
+        <div className="mb-5"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Quantity (units to bottle)</label><input type="number" value={qty} onChange={e=>setQty(e.target.value)} placeholder="e.g., 500" className="w-full p-3.5 rounded-xl bg-white border border-slate-200 text-slate-700 placeholder-slate-300 focus:border-blue-500 focus:outline-none"/></div>
+        <div className="mb-6"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Assign To</label><input type="text" value={asgn} onChange={e=>setAsgn(e.target.value)} placeholder="Worker name" className="w-full p-3.5 rounded-xl bg-white border border-slate-200 text-slate-700 placeholder-slate-300 focus:border-blue-500 focus:outline-none"/></div>
+        <button onClick={createBottling} disabled={!flavor||!qty||!asgn} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-40 transition-all">Create Bottling Order</button>
+      </div></div><Nav/></>);
+    };
+    return <BottlingForm/>;
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     CREATE WORK ORDER
+     ═══════════════════════════════════════════════════ */
+  if (view === 'create' && isMgr) {
+    const Form = () => {
+      const [rec,setRec]=useState(''); const [bs,setBs]=useState(''); const [asgn,setAsgn]=useState('');
+      const createWO = () => {
+        const r=RECIPES[rec]; const m=parseFloat(bs);
+        const w = {
+          id:`WO-${Date.now()}`, recipe:rec, recipeName:r.name, recipeColor:r.color,
+          batchSize:m, assignee:asgn, createdAt:new Date().toISOString(), status:'pending',
+          wineAbv:null, waterAdded:null, deleted:false, deletedAt:null,
+          ingredients: r.ingredients.map(ing => ({...ing, targetAmount:ing.amount*m, actualAmount:null}))
+        };
+        SS.saveWO(w); setWo(w); refresh(); setView('wo-created');
+      };
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-6">
+        <button onClick={()=>setView('home')} className="text-slate-400 hover:text-blue-600 mb-5 flex items-center gap-1 text-sm font-medium">← Back</button>
+        <h2 className="text-2xl font-extrabold text-slate-800 mb-6">Create Work Order</h2>
+        <div className="mb-5"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Recipe</label><div className="space-y-2">{Object.entries(RECIPES).map(([k,r])=>(
+          <button key={k} onClick={()=>setRec(k)} className={`w-full p-3.5 rounded-xl transition-all text-left ${rec===k?'bg-blue-50 border-2 border-blue-500':'bg-white border border-slate-200 hover:border-slate-300'}`}>
+            <div className="flex items-center gap-2.5"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:r.color}}/><span className="text-sm font-semibold text-slate-700">{r.name}</span></div>
+            {rec===k && <div className="mt-2 pl-5 space-y-0.5">{r.ingredients.map((ing,i)=>(
+              <div key={i} className="text-[10px] text-slate-500 flex justify-between">
+                <span>{ing.name}</span>
+                <span className="font-mono text-slate-400">
+                  {ing.unit==='g' ? `${ing.amount}g / ${(ing.amount*GM_TO_LBS).toFixed(5)} lbs` :
+                   ing.unit==='ml' ? `${(ing.amount/1000).toFixed(3)}L / ${(ing.amount/1000*LT_TO_GAL).toFixed(5)} gal` :
+                   `${ing.amount} ${ing.unit}`}
+                </span>
+              </div>
+            ))}</div>}
+          </button>
+        ))}</div></div>
+        <div className="mb-5"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Batch Size (multiplier)</label><input type="number" value={bs} onChange={e=>setBs(e.target.value)} placeholder="e.g., 2000" className="w-full p-3.5 rounded-xl bg-white border border-slate-200 text-slate-700 placeholder-slate-300 focus:border-blue-500 focus:outline-none"/>{bs&&rec&&<div className="mt-2 text-xs text-slate-400">Wine: {(RECIPES[rec].ingredients.find(i=>i.isWine).amount*parseFloat(bs)/1000).toFixed(1)}L · Sugar: {(RECIPES[rec].ingredients.find(i=>i.code==='SUCROSE').amount*parseFloat(bs)/1000).toFixed(1)}kg</div>}</div>
+        <div className="mb-6"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Assign To</label><input type="text" value={asgn} onChange={e=>setAsgn(e.target.value)} placeholder="Worker name" className="w-full p-3.5 rounded-xl bg-white border border-slate-200 text-slate-700 placeholder-slate-300 focus:border-blue-500 focus:outline-none"/></div>
+        <button onClick={createWO} disabled={!rec||!bs||!asgn} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-40 transition-all">Create Work Order</button>
+      </div></div><Nav/></>);
+    };
+    return <Form/>;
+  }
+  
+  // WO Created confirmation
+  if (view === 'wo-created') {
+    return (<><Hdr/><div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 pb-24"><div className="max-w-sm w-full slide-up"><div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center">
+      <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-500/25"><I.Check c="w-8 h-8 text-white"/></div>
+      <h2 className="text-xl font-extrabold text-slate-800 mb-1">Work Order Created!</h2>
+      <div className="text-blue-600 font-mono text-sm mb-3">{wo?.id}</div>
+      <p className="text-slate-400 text-sm mb-6">{wo?.recipeName} · {wo?.batchSize}x · Assigned to {wo?.assignee}</p>
+      <button onClick={()=>setView('home')} className="bg-slate-800 hover:bg-slate-900 text-white font-semibold px-6 py-3 rounded-xl transition-all text-sm">Done</button>
+    </div></div></div><Nav/></>);
+  }
+
+  /* ═══════════════════════════════════════════════════
+     PRODUCTION FLOW
+     ═══════════════════════════════════════════════════ */
+  if (view === 'production' && wo) {
+    const recipe = RECIPES[wo.recipe];
+    const totalSteps = wo.ingredients.length + 1; // +1 for wine ABV
+    const displayStep = step + 2; // -1→1 (ABV), 0→2 (first ing), etc.
+    const progress = (displayStep / (totalSteps + 2)) * 100;
+    
+    // STEP -1: Wine ABV Input + Adjusted calculations
+    if (step === -1) {
+      const AbvStep = () => {
+        const [abv, setAbv] = useState(wo.wineAbv || '');
+        const blend = abv ? calcBlend(recipe, wo.batchSize, parseFloat(abv)) : null;
+        const baseWineMl = recipe.ingredients.find(i=>i.isWine).amount * wo.batchSize;
+        
+        return (<>
+          <div className="min-h-screen bg-slate-50 pb-24">
+            <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-50"><div className="max-w-md mx-auto">
+              <div className="flex items-center justify-between mb-3"><div><div className="text-xs text-slate-400 font-mono">{wo.id}</div><div className="text-sm font-bold text-slate-800">{wo.recipeName}</div></div><div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-sm"><I.Drop c="w-5 h-5 text-white"/></div></div>
+              <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="absolute inset-y-0 left-0 bg-blue-500 transition-all duration-500 rounded-full" style={{width:`${progress}%`}}/></div>
+              <div className="text-[10px] text-slate-400 mt-1.5">Step 1 of {totalSteps+1} · Wine ABV</div>
+            </div></div>
+            <div className="max-w-md mx-auto px-4 pt-6">
+              <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm fade-in">
+                <div className="text-center mb-5">
+                  <div className="text-[10px] text-blue-500 font-bold uppercase tracking-wider mb-1">BEFORE BLENDING</div>
+                  <h3 className="text-lg font-extrabold text-slate-800 mb-1">Agave Wine ABV</h3>
+                  <p className="text-xs text-slate-400">Wine arrives at 24% ABV and may be blended with water. Enter the actual ABV.</p>
+                </div>
+                <div className="mb-5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Actual Wine ABV (%)</label>
+                  <input type="number" step="0.1" value={abv} onChange={e=>setAbv(e.target.value)} placeholder="e.g., 24.0"
+                    className="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-2xl text-center font-bold placeholder-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"/>
+                </div>
+                
+                {blend && (
+                  <div className="space-y-3 mb-5 fade-in">
+                    <div className={`rounded-xl p-4 ${Math.abs(blend.abvChange) > 1 ? 'bg-amber-50 border border-amber-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-500">Blending Calculation</div>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between"><span className="text-xs text-slate-500">Recipe assumes</span><span className="text-xs font-bold text-slate-700">{RECIPE_WINE_ABV}% ABV</span></div>
+                        <div className="flex justify-between"><span className="text-xs text-slate-500">Actual wine</span><span className="text-xs font-bold text-slate-700">{parseFloat(abv).toFixed(1)}% ABV</span></div>
+                        {Math.abs(blend.abvChange) > 0.1 && (
+                          <div className="flex justify-between"><span className="text-xs text-amber-600">ABV difference</span><span className="text-xs font-bold text-amber-700">{blend.abvChange > 0 ? '-' : '+'}{Math.abs(blend.abvChange).toFixed(1)}%</span></div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-2 text-blue-500">Adjusted Amounts</div>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between"><span className="text-xs text-slate-500">Base wine (recipe)</span><span className="text-xs text-slate-400">{(baseWineMl/1000).toFixed(1)}L / {(baseWineMl/1000*LT_TO_GAL).toFixed(2)} gal</span></div>
+                        <div className="flex justify-between"><span className="text-xs text-slate-600 font-semibold">Adjusted wine needed</span><span className="text-xs font-bold text-blue-700">{blend.adjustedWineLt.toFixed(1)}L / {blend.wineGal.toFixed(2)} gal</span></div>
+                        {Math.abs(blend.wineChange) > 0.5 && (
+                          <div className="flex justify-between"><span className="text-xs text-amber-600">Wine change</span><span className="text-xs font-bold text-amber-700">{blend.wineChange > 0 ? '+' : ''}{blend.wineChange.toFixed(1)}%</span></div>
+                        )}
+                        <div className="border-t border-blue-200 pt-1.5 mt-1.5"></div>
+                        <div className="flex justify-between"><span className="text-xs text-slate-500">Est. water add</span><span className="text-xs font-bold text-blue-600">{blend.waterLt.toFixed(1)}L / {blend.waterGal.toFixed(2)} gal</span></div>
+                        <div className="flex justify-between"><span className="text-xs text-slate-500">Est. total volume</span><span className="text-xs font-bold text-emerald-700">{blend.totalLt.toFixed(1)}L / {blend.totalGal.toFixed(2)} gal</span></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <button onClick={() => {
+                  const a = parseFloat(abv);
+                  const b = calcBlend(recipe, wo.batchSize, a);
+                  // Update wine ingredient target to adjusted amount
+                  const u = {...wo, wineAbv: a, estimatedWater: b.waterLt, estimatedTotal: b.totalLt,
+                    ingredients: wo.ingredients.map(ing => ing.isWine ? {...ing, targetAmount: b.adjustedWineMl} : ing)};
+                  setWo(u); SS.updateWO(u); refresh(); setStep(0);
+                }} disabled={!abv}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-30 transition-all text-sm">
+                  Continue to Ingredients →
+                </button>
+              </div>
+            </div>
+          </div>
+          <Nav/>
+        </>);
+      };
+      return <AbvStep/>;
+    }
+    
+    // INGREDIENT STEPS
+    const ing = wo.ingredients[step];
+    if (!ing) { setView('water-step'); return null; }
+    
+    const isLiquid = ing.unit === 'ml';
+    const unitLabel = isLiquid ? 'ml' : 'g';
+    const dualUnit = isLiquid
+      ? `${(ing.targetAmount/1000).toFixed(3)} L / ${(ing.targetAmount/1000*LT_TO_GAL).toFixed(5)} gal`
+      : `${ing.targetAmount.toFixed(2)} g / ${(ing.targetAmount*GM_TO_LBS).toFixed(5)} lbs`;
+    
+    return (<>
+      <div className="min-h-screen bg-slate-50 pb-24">
+        <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-50"><div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-3"><div><div className="text-xs text-slate-400 font-mono">{wo.id}</div><div className="text-sm font-bold text-slate-800">{wo.recipeName}</div></div><div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-sm"><I.Drop c="w-5 h-5 text-white"/></div></div>
+          <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="absolute inset-y-0 left-0 bg-blue-500 transition-all duration-500 rounded-full" style={{width:`${((step+2)/(totalSteps+2))*100}%`}}/></div>
+          <div className="text-[10px] text-slate-400 mt-1.5">Step {step+2} of {totalSteps+1} · {ing.name}</div>
+        </div></div>
+        <div className="max-w-md mx-auto px-4 pt-6">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm mb-5 fade-in">
+            <div className="text-center mb-5"><div className="text-[10px] text-blue-500 font-bold uppercase tracking-wider mb-1">ADD INGREDIENT</div><h3 className="text-lg font-extrabold text-slate-800 mb-1">{ing.name}</h3><div className="text-xs text-slate-400 font-mono">{ing.code}</div></div>
+            <div className="bg-blue-50 rounded-xl p-5 mb-2">
+              <div className="text-center"><div className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold mb-1">Target Amount</div><div className="text-4xl font-extrabold text-blue-600">{ing.targetAmount.toFixed(2)}</div><div className="text-sm text-blue-400 mt-0.5">{unitLabel}</div></div>
+            </div>
+            <div className="text-center text-[10px] text-slate-400 mb-5 font-mono">{dualUnit}</div>
+            <div className="mb-5">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Actual Amount ({unitLabel})</label>
+              <input type="number" step="0.01" value={ing.actualAmount??''} onChange={e=>{const u={...wo,ingredients:[...wo.ingredients]};u.ingredients[step]={...u.ingredients[step],actualAmount:parseFloat(e.target.value)};setWo(u);SS.updateWO(u);}} placeholder={`Enter ${unitLabel}`}
+                className="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-2xl text-center font-bold placeholder-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"/>
+              {ing.actualAmount!=null && (()=>{
+                const diff = Math.abs(ing.actualAmount - ing.targetAmount);
+                const pct = ing.targetAmount > 0 ? (diff / ing.targetAmount * 100) : 0;
+                const ok = pct <= 5;
+                return <div className={`mt-2 text-center text-xs font-semibold ${ok?'text-emerald-600':'text-amber-600'}`}>
+                  {ok ? `✓ Within tolerance (${pct.toFixed(1)}%)` : `⚠ ${pct.toFixed(1)}% off target (>5%)`}
+                  {ing.actualAmount!=null && <span className="text-slate-400 ml-2">= {isLiquid ? `${(ing.actualAmount/1000).toFixed(3)}L / ${(ing.actualAmount/1000*LT_TO_GAL).toFixed(5)} gal` : `${(ing.actualAmount*GM_TO_LBS).toFixed(5)} lbs`}</span>}
+                </div>;
+              })()}
+            </div>
+            <button onClick={()=>{ if(step < wo.ingredients.length-1) setStep(step+1); else setView('water-step'); }} disabled={ing.actualAmount==null}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-30 transition-all text-sm">
+              {step<wo.ingredients.length-1?'Next Ingredient →':'Continue to Water Add →'}
+            </button>
+          </div>
+          {/* Checklist */}
+          <div className="space-y-1.5">{wo.ingredients.map((x,i)=>(
+            <div key={i} className={`p-3 rounded-xl transition-all ${i===step?'bg-blue-50 border border-blue-200':x.actualAmount!=null?'bg-emerald-50 border border-emerald-100':'bg-white border border-slate-100'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">{x.actualAmount!=null?<I.Check c="w-4 h-4 text-emerald-500"/>:i===step?<div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"/>:<div className="w-4 h-4 rounded-full border-2 border-slate-200"/>}<div className={`text-xs font-medium ${i===step?'text-slate-800':x.actualAmount!=null?'text-emerald-700':'text-slate-400'}`}>{x.name}</div></div>
+                <div className="text-[10px] text-slate-400 font-mono">{x.targetAmount.toFixed(2)} {x.unit}</div>
+              </div>
+            </div>
+          ))}</div>
+        </div>
+      </div>
+      <Nav/>
+    </>);
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     WATER STEP
+     ═══════════════════════════════════════════════════ */
+  if (view === 'water-step' && wo) {
+    const WaterStep = () => {
+      const recipe = RECIPES[wo.recipe];
+      const blend = calcBlend(recipe, wo.batchSize, wo.wineAbv || RECIPE_WINE_ABV);
+      const [water, setWater] = useState(wo.waterAdded || '');
+      
+      return (<>
+        <div className="min-h-screen bg-slate-50 pb-24">
+          <div className="bg-white border-b border-slate-100 p-4 sticky top-0 z-50"><div className="max-w-md mx-auto">
+            <div className="flex items-center justify-between mb-3"><div><div className="text-xs text-slate-400 font-mono">{wo.id}</div><div className="text-sm font-bold text-slate-800">{wo.recipeName}</div></div></div>
+            <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="absolute inset-y-0 left-0 bg-blue-500 rounded-full" style={{width:'95%'}}/></div>
+            <div className="text-[10px] text-slate-400 mt-1.5">Final Step · Water Addition</div>
+          </div></div>
+          <div className="max-w-md mx-auto px-4 pt-6">
+            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm fade-in">
+              <div className="text-center mb-5">
+                <div className="text-[10px] text-blue-500 font-bold uppercase tracking-wider mb-1">WATER ADDITION</div>
+                <h3 className="text-lg font-extrabold text-slate-800 mb-1">Filtered Water</h3>
+                <p className="text-xs text-slate-400">Based on {wo.wineAbv||RECIPE_WINE_ABV}% wine ABV → {TARGET_ABV}% target</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-5 mb-3">
+                <div className="text-center"><div className="text-[10px] text-amber-500 uppercase tracking-wider font-semibold mb-1">Estimated Water Add</div>
+                  <div className="text-4xl font-extrabold text-amber-600">{blend.waterLt.toFixed(1)}</div>
+                  <div className="text-sm text-amber-400 mt-0.5">liters ({blend.waterGal.toFixed(2)} gal)</div>
+                </div>
+              </div>
+              <div className="bg-blue-50 rounded-xl p-3 mb-3">
+                <div className="text-center"><div className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold mb-1">Estimated Total Volume</div>
+                  <div className="text-xl font-extrabold text-blue-600">{blend.totalLt.toFixed(1)} L</div>
+                  <div className="text-xs text-blue-400">{blend.totalGal.toFixed(2)} gallons</div>
+                </div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-5">
+                <div className="text-xs text-slate-500">⚠️ Water amount is an estimate. Large variance is expected — actual amount depends on final ABV reading.</div>
+              </div>
+              <div className="mb-5">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Actual Water Added (Liters)</label>
+                <input type="number" step="0.1" value={water} onChange={e=>setWater(e.target.value)} placeholder="Enter liters"
+                  className="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-2xl text-center font-bold placeholder-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"/>
+                {water && <div className="mt-2 text-center text-xs text-slate-400 font-mono">{(parseFloat(water)*LT_TO_GAL).toFixed(5)} gallons · {Math.abs(parseFloat(water)-blend.waterLt).toFixed(1)}L from estimate</div>}
+              </div>
+              <button onClick={()=>{const u={...wo,waterAdded:parseFloat(water),status:'qc-pending',blendedAt:new Date().toISOString()};setWo(u);SS.updateWO(u);refresh();setView('qc-notify');}} disabled={!water}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-30 transition-all text-sm">
+                Complete Blending ✓
+              </button>
+            </div>
+          </div>
+        </div>
+        <Nav/>
+      </>);
+    };
+    return <WaterStep/>;
+  }
+  
+  // QC Notification
+  if (view === 'qc-notify') {
+    return (<><Hdr/><div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 pb-24"><div className="max-w-sm w-full slide-up"><div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center">
+      <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-500/25"><I.Beaker c="w-8 h-8 text-white"/></div>
+      <h2 className="text-xl font-extrabold text-slate-800 mb-1">Blending Complete!</h2>
+      <div className="text-blue-600 font-mono text-sm mb-3">{wo?.id}</div>
+      <p className="text-slate-400 text-sm mb-6">Ready for QC testing.</p>
+      <div className="space-y-2">{isMgr && <button onClick={()=>setView('qc-queue')} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-sm">Go to QC Queue</button>}<button onClick={()=>setView('home')} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm">Back to Home</button></div>
+    </div></div></div><Nav/></>);
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     QC QUEUE
+     ═══════════════════════════════════════════════════ */
+  if (view === 'qc-queue' && isMgr) {
+    const qc = orders.filter(o=>o.status==='qc-pending'&&!o.deleted);
+    return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-6">
+      <h1 className="text-2xl font-extrabold text-slate-800 mb-6 flex items-center gap-2"><I.Beaker c="w-6 h-6 text-blue-500"/> QC Queue</h1>
+      {qc.length>0?(<div className="space-y-3">{qc.map(o=>(
+        <div key={o.id} className="bg-white rounded-xl p-5 border border-blue-100 shadow-sm">
+          <div className="flex items-center justify-between mb-3"><span className="font-mono text-xs text-blue-500">{o.id}</span><Badge s="qc-pending"/></div>
+          <div className="text-sm font-bold text-slate-800 mb-1">{o.recipeName}</div>
+          <div className="text-xs text-slate-400 mb-4">{o.batchSize}x · Wine ABV: {o.wineAbv}%</div>
+          <button onClick={()=>{setWo(o);setView('qc-testing');}} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg text-sm">Start QC Testing</button>
+        </div>
+      ))}</div>):(<div className="text-center py-16"><I.Beaker c="w-10 h-10 mx-auto mb-3 text-slate-300"/><div className="text-slate-400 text-sm">No batches waiting for QC</div></div>)}
+    </div></div><Nav/></>);
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     QC TESTING
+     ═══════════════════════════════════════════════════ */
+  if (view === 'qc-testing' && wo && isMgr) {
+    const QC = () => {
+      const [taste,setTaste]=useState(''); const [eth,setEth]=useState(''); const [notes,setNotes]=useState('');
+      const submit = () => {
+        const u={...wo,status:'completed',completedAt:new Date().toISOString(),qcData:{taste,ethanol:parseFloat(eth),notes,testedAt:new Date().toISOString(),by:user.name}};
+        setWo(u);SS.updateWO(u);setQcData(u.qcData);refresh();setView('complete');
+      };
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-6">
+        <button onClick={()=>setView('qc-queue')} className="text-slate-400 hover:text-blue-600 mb-5 flex items-center gap-1 text-sm font-medium">← Back</button>
+        <h2 className="text-2xl font-extrabold text-slate-800 mb-6 flex items-center gap-2"><I.Beaker c="w-6 h-6 text-blue-500"/> QC Testing</h2>
+        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-5"><div className="text-xs text-slate-400 mb-0.5">Work Order</div><div className="text-sm font-mono font-bold text-slate-700">{wo.id}</div><div className="text-xs text-slate-500">{wo.recipeName} · {wo.batchSize}x · Wine ABV: {wo.wineAbv}%</div></div>
+        <div className="space-y-5">
+          <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Taste Test</label><div className="grid grid-cols-3 gap-2">{['Fail','Pass','Excellent'].map(o=>(<button key={o} onClick={()=>setTaste(o)} className={`p-3 rounded-xl transition-all font-semibold text-sm ${taste===o?o==='Fail'?'bg-red-500 text-white':o==='Pass'?'bg-amber-500 text-white':'bg-emerald-500 text-white':'bg-white border border-slate-200 text-slate-500'}`}>{o}</button>))}</div></div>
+          <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ethanol % ABV</label><input type="number" step="0.1" value={eth} onChange={e=>setEth(e.target.value)} placeholder="e.g., 15.0" className="w-full p-3.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xl text-center font-bold placeholder-slate-300 focus:border-blue-500 focus:outline-none"/><div className="mt-1.5 text-center text-xs text-slate-400">Target: {TARGET_ABV}% ABV</div>{eth&&<div className={`mt-1 text-center text-xs font-semibold ${Math.abs(parseFloat(eth)-TARGET_ABV)<=TARGET_ABV*0.05?'text-emerald-600':'text-amber-600'}`}>{Math.abs(parseFloat(eth)-TARGET_ABV)<=TARGET_ABV*0.05?'✓ Within 5% of target':`${((Math.abs(parseFloat(eth)-TARGET_ABV)/TARGET_ABV)*100).toFixed(1)}% off target`}</div>}</div>
+          <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Notes</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Observations..." rows={3} className="w-full p-3.5 rounded-xl bg-white border border-slate-200 text-slate-700 placeholder-slate-300 focus:border-blue-500 focus:outline-none resize-none text-sm"/></div>
+          <button onClick={submit} disabled={!taste||!eth} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-40 transition-all text-sm">Approve & Complete</button>
+        </div>
+      </div></div><Nav/></>);
+    };
+    return <QC/>;
+  }
+  
+  // Production Complete
+  if (view === 'complete' && wo) {
+    return (<><Hdr/><div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 pb-24"><div className="max-w-sm w-full slide-up"><div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center">
+      <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-500/25"><I.Check c="w-8 h-8 text-white"/></div>
+      <h2 className="text-xl font-extrabold text-slate-800 mb-1">Production Complete!</h2>
+      <div className="text-blue-600 font-mono text-sm mb-5">{wo.id}</div>
+      <div className="bg-slate-50 rounded-xl p-4 mb-4 text-left space-y-2">
+        {[['Product',wo.recipeName],['Batch',`${wo.batchSize}x`],['Wine ABV',`${wo.wineAbv}%`],['Water Added',`${wo.waterAdded}L (${(wo.waterAdded*LT_TO_GAL).toFixed(2)} gal)`],['Taste',qcData.taste],['Ethanol',`${qcData.ethanol}% ABV`]].map(([l,v])=>(<div key={l} className="flex justify-between"><span className="text-xs text-slate-400">{l}</span><span className="text-xs font-bold text-slate-700">{v}</span></div>))}
+      </div>
+      {isAdmin && <button onClick={()=>generateBlendReport(wo)} className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold py-3 rounded-xl text-sm mb-3 flex items-center justify-center gap-2"><I.Download c="w-4 h-4"/> Download Blend Report</button>}
+      <button onClick={()=>{setWo(null);setStep(-1);setQcData({});refresh();setView('home');}} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 rounded-xl text-sm">Back to Home</button>
+    </div></div></div><Nav/></>);
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     HISTORY (with soft delete & archive)
+     ═══════════════════════════════════════════════════ */
+  if (view === 'history' && isMgr) {
+    const activeOrders = orders.filter(o => !o.deleted);
+    const deletedOrders = orders.filter(o => o.deleted);
+    let filtered = showArchived ? deletedOrders : activeOrders;
+    if (filter !== 'all') filtered = filtered.filter(o => o.status === filter);
+    if (search) filtered = filtered.filter(o => `${o.id} ${o.recipeName} ${o.assignee}`.toLowerCase().includes(search.toLowerCase()));
+    filtered = filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    const softDelete = (id) => {
+      const all = SS.allWO();
+      const i = all.findIndex(x => x.id === id);
+      if (i !== -1) { all[i].deleted = true; all[i].deletedAt = new Date().toISOString(); all[i].status = 'deleted'; SS.s('wo', all); refresh(); }
+    };
+    const restore = (id) => {
+      const all = SS.allWO();
+      const i = all.findIndex(x => x.id === id);
+      if (i !== -1) { all[i].deleted = false; all[i].deletedAt = null; all[i].status = 'completed'; SS.s('wo', all); refresh(); }
+    };
+    
+    return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-4xl mx-auto px-4 pt-6">
+      <h1 className="text-2xl font-extrabold text-slate-800 mb-4">Work Order History</h1>
+      <div className="flex gap-2 mb-4">
+        <button onClick={()=>setShowArchived(false)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${!showArchived?'bg-blue-600 text-white':'bg-white text-slate-500 border border-slate-200'}`}>Active ({activeOrders.length})</button>
+        <button onClick={()=>setShowArchived(true)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${showArchived?'bg-red-500 text-white':'bg-white text-slate-500 border border-slate-200'}`}><I.Archive c="w-3 h-3"/> Deleted ({deletedOrders.length})</button>
+      </div>
+      <div className="mb-4 space-y-3">
+        <div className="relative"><I.Search c="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/><input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm placeholder-slate-300 focus:border-blue-500 focus:outline-none"/></div>
+        {!showArchived && <div className="flex gap-2 overflow-x-auto pb-1">{['all','pending','in-progress','qc-pending','completed'].map(s=>(<button key={s} onClick={()=>setFilter(s)} className={`px-3 py-1.5 rounded-lg whitespace-nowrap text-xs font-semibold transition-all ${filter===s?'bg-blue-600 text-white':'bg-white text-slate-500 border border-slate-200'}`}>{s==='all'?'All':s.replace('-',' ').replace(/\b\w/g,c=>c.toUpperCase())}</button>))}</div>}
+      </div>
+      <div className="space-y-3">{filtered.map(o=>(
+        <div key={o.id} className={`bg-white rounded-xl p-4 border shadow-sm ${o.deleted?'border-red-100 opacity-60':'border-slate-100'}`}>
+          <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:o.recipeColor}}/><span className="font-mono text-xs text-slate-400">{o.id}</span></div><Badge s={o.status}/></div>
+          <div className="text-sm font-bold text-slate-800 mb-1">{o.recipeName}</div>
+          <div className="text-xs text-slate-400 mb-2">{o.batchSize}x · {new Date(o.createdAt).toLocaleDateString()}{o.wineAbv ? ` · Wine: ${o.wineAbv}%` : ''}</div>
+          {o.deleted && <div className="text-[10px] text-red-400 mb-2">Deleted {new Date(o.deletedAt).toLocaleDateString()}</div>}
+          <div className="flex gap-2">
+            {o.status === 'completed' && !o.deleted && isAdmin && (
+              <button onClick={()=>generateBlendReport(o)} className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"><I.Download c="w-3.5 h-3.5"/> Report</button>
+            )}
+            {!o.deleted && isMgr && (
+              <button onClick={()=>{if(confirm('Delete this work order? It will be archived.'))softDelete(o.id);}} className="flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-red-600 ml-auto"><I.Trash c="w-3.5 h-3.5"/> Delete</button>
+            )}
+            {o.deleted && (
+              <button onClick={()=>restore(o.id)} className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 ml-auto"><I.Undo c="w-3.5 h-3.5"/> Restore</button>
+            )}
+          </div>
+        </div>
+      ))}</div>
+      {filtered.length===0 && <div className="text-center py-16 text-slate-400 text-sm">{showArchived?'No deleted reports':'No matching work orders'}</div>}
+    </div></div><Nav/></>);
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     DASHBOARD
+     ═══════════════════════════════════════════════════ */
+  if (view === 'dashboard' && isAdmin) {
+    const active = orders.filter(o=>!o.deleted);
+    const completed = active.filter(x=>x.status==='completed');
+    const byRecipe = {};
+    completed.forEach(x=>{if(!byRecipe[x.recipeName])byRecipe[x.recipeName]={count:0,color:x.recipeColor};byRecipe[x.recipeName].count++;});
+    const exportCSV = () => { const csv=['ID,Recipe,Batch,Assignee,Status,Wine ABV,Water Added,Created,Completed',...active.map(x=>`${x.id},${x.recipeName},${x.batchSize},${x.assignee},${x.status},${x.wineAbv||''},${x.waterAdded||''},${new Date(x.createdAt).toLocaleDateString()},${x.completedAt?new Date(x.completedAt).toLocaleDateString():''}`)].join('\n'); const b=new Blob([csv],{type:'text/csv'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download='retox_work_orders.csv'; a.click(); };
+    
+    return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-4xl mx-auto px-4 pt-6">
+      <div className="flex items-center justify-between mb-6"><h1 className="text-2xl font-extrabold text-slate-800">Dashboard</h1><button onClick={exportCSV} className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-lg"><I.Download c="w-3.5 h-3.5"/> Export CSV</button></div>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm"><div className="text-xs font-semibold text-emerald-500 mb-1">Completed</div><div className="text-3xl font-extrabold text-slate-800">{completed.length}</div></div>
+        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm"><div className="text-xs font-semibold text-amber-500 mb-1">Total Orders</div><div className="text-3xl font-extrabold text-slate-800">{active.length}</div></div>
+        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm"><div className="text-xs font-semibold text-blue-500 mb-1">In Progress</div><div className="text-3xl font-extrabold text-slate-800">{active.filter(x=>x.status==='in-progress').length}</div></div>
+        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm"><div className="text-xs font-semibold text-violet-500 mb-1">QC Pending</div><div className="text-3xl font-extrabold text-slate-800">{active.filter(x=>x.status==='qc-pending').length}</div></div>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 mb-6">
+        <h2 className="text-sm font-bold text-slate-700 mb-4">Production by Recipe</h2>
+        {Object.entries(byRecipe).map(([n,d])=>(<div key={n} className="bg-slate-50 rounded-lg p-3 mb-2"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:d.color}}/><span className="text-sm font-semibold text-slate-700">{n}</span></div><span className="text-xs text-slate-400">{d.count} batches</span></div></div>))}
+        {Object.keys(byRecipe).length===0&&<div className="text-center text-slate-400 text-sm py-6">No completed production yet</div>}
+      </div>
+    </div></div><Nav/></>);
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     COSTS (Admin)
+     ═══════════════════════════════════════════════════ */
+  if (view === 'costs' && isAdmin) {
+    const Costs = () => {
+      const [ms,setMs]=useState(mats); const [iv,setIv]=useState(invs);
+      const [showAdd,setShowAdd]=useState(false); const [newMat,setNewMat]=useState('');
+      const [im,setIm]=useState(''); const [id2,setId2]=useState(new Date().toISOString().split('T')[0]);
+      const [il,setIl]=useState(''); const [it,setIt]=useState(''); const [is2,setIs2]=useState('');
+      
+      const addMat = () => {if(!newMat.trim())return; const u=[...ms,{name:newMat.trim()}];setMs(u);SS.saveMats(u);setNewMat('');setMats(u);};
+      const rmMat = n => {const u=ms.filter(m=>m.name!==n);setMs(u);SS.saveMats(u);setMats(u);};
+      const addInv = () => {if(!im||!il||!it)return; const lbs=parseFloat(il);const tot=parseFloat(it); const inv={id:Date.now(),material:im,date:id2,lbs,totalCost:tot,costPerLb:tot/lbs,supplier:is2}; const u=[...iv,inv];setIv(u);SS.saveInvs(u);setInvs(u);setShowAdd(false);setIm('');setIl('');setIt('');setIs2('');};
+      const rmInv = id => {const u=iv.filter(i=>i.id!==id);setIv(u);SS.saveInvs(u);setInvs(u);};
+      
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-4xl mx-auto px-4 pt-6">
+        <h1 className="text-2xl font-extrabold text-slate-800 mb-6 flex items-center gap-2"><I.Dollar c="w-6 h-6 text-blue-500"/> Raw Material Costs</h1>
+        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4">
+          <h2 className="text-sm font-bold text-slate-700 mb-3">Materials</h2>
+          <div className="flex gap-2 mb-4"><input type="text" value={newMat} onChange={e=>setNewMat(e.target.value)} placeholder="Add material..." className="flex-1 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700 placeholder-slate-300 focus:border-blue-500 focus:outline-none"/><button onClick={addMat} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700"><I.Plus c="w-4 h-4"/></button></div>
+          <div className="space-y-2">{ms.map(m=>{const mi=iv.filter(i=>i.material===m.name).sort((a,b)=>new Date(b.date)-new Date(a.date)); const lc=mi[0]?.costPerLb; return(
+            <div key={m.name} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <div><div className="text-sm font-semibold text-slate-700">{m.name}</div><div className="text-[10px] text-slate-400">{mi.length} invoice{mi.length!==1?'s':''}{mi[0]?` · Last: ${mi[0].date}`:''}</div></div>
+              <div className="flex items-center gap-3">{lc?<div className="text-sm font-bold text-blue-600">${lc.toFixed(2)}/lb</div>:<div className="text-xs text-slate-400">No pricing</div>}<button onClick={()=>rmMat(m.name)} className="text-slate-300 hover:text-red-500"><I.Trash c="w-4 h-4"/></button></div>
+            </div>);
+          })}{ms.length===0&&<div className="text-center py-6 text-slate-400 text-sm">Add materials to track costs</div>}</div>
+        </div>
+        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4">
+          <div className="flex items-center justify-between mb-3"><h2 className="text-sm font-bold text-slate-700">Invoices</h2><button onClick={()=>setShowAdd(!showAdd)} className="text-xs font-semibold text-blue-600">{showAdd?'Cancel':'+ Add Invoice'}</button></div>
+          {showAdd&&(<div className="bg-blue-50 rounded-lg p-4 mb-4 space-y-3 fade-in">
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Material</label><select value={im} onChange={e=>setIm(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:border-blue-500 focus:outline-none"><option value="">Select...</option>{ms.map(m=><option key={m.name} value={m.name}>{m.name}</option>)}</select></div>
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Date</label><input type="date" value={id2} onChange={e=>setId2(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:border-blue-500 focus:outline-none"/></div>
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Pounds (lbs)</label><input type="number" step="0.01" value={il} onChange={e=>setIl(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm placeholder-slate-300 focus:border-blue-500 focus:outline-none"/></div>
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Total Cost ($)</label><input type="number" step="0.01" value={it} onChange={e=>setIt(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm placeholder-slate-300 focus:border-blue-500 focus:outline-none"/></div>
+            </div>
+            <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Supplier</label><input type="text" value={is2} onChange={e=>setIs2(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm placeholder-slate-300 focus:border-blue-500 focus:outline-none"/></div>
+            {il&&it&&<div className="text-xs text-blue-600 font-semibold">= ${(parseFloat(it)/parseFloat(il)).toFixed(2)}/lb</div>}
+            <button onClick={addInv} disabled={!im||!il||!it} className="w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-blue-700">Add Invoice</button>
+          </div>)}
+          <div className="space-y-2">{iv.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20).map(inv=>(
+            <div key={inv.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <div><div className="text-xs font-semibold text-slate-700">{inv.material}</div><div className="text-[10px] text-slate-400">{inv.date} · {inv.lbs.toFixed(2)} lbs · ${inv.totalCost.toFixed(2)}{inv.supplier?` · ${inv.supplier}`:''}</div></div>
+              <div className="flex items-center gap-2"><div className="text-xs font-bold text-emerald-600">${inv.costPerLb.toFixed(2)}/lb</div><button onClick={()=>rmInv(inv.id)} className="text-slate-300 hover:text-red-500"><I.Trash c="w-3.5 h-3.5"/></button></div>
+            </div>
+          ))}{iv.length===0&&<div className="text-center py-6 text-slate-400 text-sm">No invoices yet</div>}</div>
+        </div>
+      </div></div><Nav/></>);
+    };
+    return <Costs/>;
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     INVENTORY MANAGEMENT (Admin) — Enhanced
+     ═══════════════════════════════════════════════════ */
+  if (view === 'inventory' && isAdmin) {
+    const Inv = () => {
+      const [inv, setInv2] = useState(SS.inventory());
+      const [mode, setMode] = useState('current'); // current | alerts | count | forecast | reports
+      const [countData, setCountData] = useState({});
+      const [reports, setReports] = useState(SS.invReports());
+      const [forecastWeeks, setForecastWeeks] = useState(4);
+      const [forecastUnits, setForecastUnits] = useState({});
+      
+      // Low stock: items below reorder point
+      const getLowStock = () => {
+        return inv.filter(item => {
+          const master = ALL_INVENTORY_ITEMS.find(m => m.name === item.name);
+          const rp = item.reorderPoint || master?.reorderPoint || 0;
+          return rp > 0 && item.quantity <= rp;
+        });
+      };
+      const lowStock = getLowStock();
+      
+      // Get supplier for an item
+      const getSupplier = (itemName) => {
+        const master = ALL_INVENTORY_ITEMS.find(m => m.name === itemName);
+        if (master?.supplier) return master.supplier;
+        // Check if it's a flavor
+        if (MASTER_FLAVORS.some(f => itemName.includes(f.code))) return 'Givaudan';
+        if (itemName.includes('Cup') && itemName.includes('Retox')) return 'H3';
+        if (itemName.includes('Copa Cup')) return 'H3';
+        if (itemName.includes('Foil') || itemName.includes('Crown Cap')) return 'Gamer';
+        if (itemName.includes('Corrugated')) return 'John Baker';
+        return '';
+      };
+      
+      // Upload inventory CSV/XLSX
+      const handleUpload = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const wb = XLSX.read(ev.target.result, {type:'binary'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(ws);
+            const items = data.map(r => ({
+              name: r.Item || r.item || r.Name || r.name || '',
+              quantity: parseFloat(r.Quantity || r.quantity || r.Qty || r.qty || 0),
+              unit: r.Unit || r.unit || r.UOM || '',
+              reorderPoint: parseFloat(r.ReorderPoint || r.reorderPoint || r.Reorder || 0) || 0,
+              lastUpdated: new Date().toISOString(),
+            })).filter(i => i.name);
+            setInv2(items); SS.saveInventory(items);
+            alert(`Imported ${items.length} inventory items`);
+          } catch(err) { alert('Error reading file. Ensure columns: Item, Quantity, Unit (optional: ReorderPoint)'); }
+        };
+        reader.readAsBinaryString(file);
+      };
+      
+      // Manual add
+      const [newName, setNewName] = useState('');
+      const [newQty, setNewQty] = useState('');
+      const [newUnit, setNewUnit] = useState('GM');
+      const [newReorder, setNewReorder] = useState('');
+      const addItem = () => {
+        if (!newName || !newQty) return;
+        const u = [...inv, {name:newName, quantity:parseFloat(newQty), unit:newUnit, reorderPoint: parseFloat(newReorder)||0, lastUpdated:new Date().toISOString()}];
+        setInv2(u); SS.saveInventory(u); setNewName(''); setNewQty(''); setNewReorder('');
+      };
+      
+      // Update reorder point
+      const updateReorder = (idx, val) => {
+        const u = [...inv]; u[idx] = {...u[idx], reorderPoint: parseFloat(val)||0};
+        setInv2(u); SS.saveInventory(u);
+      };
+      
+      // Start inventory count
+      const startCount = () => {
+        const cd = {};
+        (inv.length > 0 ? inv : ALL_INVENTORY_ITEMS.map(i=>({...i,quantity:0}))).forEach(item => {
+          cd[item.name] = { expected: item.quantity, actual: '', unit: item.unit };
+        });
+        setCountData(cd); setMode('count');
+      };
+      
+      // Save count report
+      const saveCount = () => {
+        const report = {
+          id: Date.now(), date: new Date().toISOString(), countedBy: user.name,
+          items: Object.entries(countData).map(([name, d]) => ({
+            name, expected: d.expected, actual: parseFloat(d.actual) || 0, unit: d.unit,
+            variance: (parseFloat(d.actual) || 0) - d.expected,
+          }))
+        };
+        const r = [...reports, report]; setReports(r); SS.saveInvReports(r);
+        const newInv = report.items.map(i => {
+          const existing = inv.find(x => x.name === i.name);
+          return {name:i.name, quantity:i.actual, unit:i.unit, reorderPoint: existing?.reorderPoint||0, lastUpdated:report.date};
+        });
+        setInv2(newInv); SS.saveInventory(newInv);
+        setMode('current'); alert('Inventory count saved!');
+      };
+      
+      // ── Production Forecaster ──
+      // Estimate material needs based on projected unit sales
+      const calcForecast = () => {
+        const needs = {};
+        // For each flavor with forecast units, calculate ingredient needs
+        Object.entries(forecastUnits).forEach(([recipeId, units]) => {
+          const u = parseInt(units) || 0;
+          if (u === 0) return;
+          const recipe = RECIPES[recipeId];
+          if (!recipe) return;
+          // Each unit ~ 187ml cup → multiplier = (units * 0.187) / base_amounts_per_liter
+          // Actually the batch multiplier in recipes = liters of batch. 1 cup ≈ 187ml so cups = batchSize * 1000/187
+          // Reverse: to make N cups, batchMult ≈ N * 0.187
+          const batchMult = u * 0.187;
+          recipe.ingredients.forEach(ing => {
+            const key = ing.isWine ? 'Bulk Wine - Agave' : ing.code === 'SUCROSE' ? 'Bulk Sugar' : ing.name;
+            const amount = ing.amount * batchMult;
+            if (!needs[key]) needs[key] = { amount: 0, unit: ing.unit };
+            needs[key].amount += amount;
+          });
+          // Cups needed
+          const cupFlavor = RETOX_CUPS.find(c => recipe.name.toLowerCase().includes(c.flavor.toLowerCase()));
+          if (cupFlavor) {
+            const cupKey = `Retox Cup — ${cupFlavor.flavor} (${cupFlavor.h3Color})`;
+            if (!needs[cupKey]) needs[cupKey] = { amount: 0, unit: 'EA' };
+            needs[cupKey].amount += u;
+          }
+          // Foil seals
+          if (!needs['Foil Seals — Retox']) needs['Foil Seals — Retox'] = { amount: 0, unit: 'EA' };
+          needs['Foil Seals — Retox'].amount += u;
+          // Boxes (assume 24 per box)
+          if (!needs['Corrugated Box — Retox']) needs['Corrugated Box — Retox'] = { amount: 0, unit: 'EA' };
+          needs['Corrugated Box — Retox'].amount += Math.ceil(u / 24);
+        });
+        return needs;
+      };
+      
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-4xl mx-auto px-4 pt-6">
+        <h1 className="text-2xl font-extrabold text-slate-800 mb-4 flex items-center gap-2"><I.Box c="w-6 h-6 text-blue-500"/> Inventory</h1>
+        
+        {/* Low stock banner */}
+        {lowStock.length > 0 && mode !== 'alerts' && (
+          <button onClick={()=>setMode('alerts')} className="w-full mb-4 bg-red-50 border border-red-200 rounded-xl p-3 text-left fade-in">
+            <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs font-bold">{lowStock.length}</span></div><span className="text-sm font-bold text-red-700">Low Stock Alerts</span></div><span className="text-xs text-red-400">Tap to view →</span></div>
+          </button>
+        )}
+        
+        <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+          {[
+            {id:'current',label:'Current'},
+            {id:'alerts',label:`Alerts${lowStock.length?` (${lowStock.length})`:''}`},
+            {id:'forecast',label:'Forecaster'},
+            {id:'count',label:'Count',action:startCount},
+            {id:'reports',label:`Reports (${reports.length})`},
+          ].map(t=>(
+            <button key={t.id} onClick={()=>t.action?t.action():setMode(t.id)} className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${mode===t.id?'bg-blue-600 text-white':'bg-white text-slate-500 border border-slate-200'}`}>{t.label}</button>
+          ))}
+        </div>
+        
+        {/* ══ CURRENT INVENTORY ══ */}
+        {mode === 'current' && (<>
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4">
+            <h2 className="text-sm font-bold text-slate-700 mb-2">Upload Inventory</h2>
+            <p className="text-[10px] text-slate-400 mb-2">Upload .xlsx or .csv with columns: <span className="font-mono text-slate-500">Item, Quantity, Unit</span> (optional: <span className="font-mono text-slate-500">ReorderPoint</span>)</p>
+            <label className="flex items-center gap-2 cursor-pointer bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg px-3 py-2.5 transition-all">
+              <I.Upload c="w-4 h-4 text-blue-500"/><span className="text-xs font-semibold text-blue-600">Choose File</span>
+              <input type="file" accept=".xlsx,.xls,.csv" onChange={handleUpload} className="hidden"/>
+            </label>
+          </div>
+          
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4">
+            <h2 className="text-sm font-bold text-slate-700 mb-2">Add Item</h2>
+            <div className="flex gap-1.5 flex-wrap">
+              <input type="text" value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Item name" className="flex-1 min-w-[120px] px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs placeholder-slate-300 focus:border-blue-500 focus:outline-none"/>
+              <input type="number" value={newQty} onChange={e=>setNewQty(e.target.value)} placeholder="Qty" className="w-20 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs placeholder-slate-300 focus:border-blue-500 focus:outline-none"/>
+              <select value={newUnit} onChange={e=>setNewUnit(e.target.value)} className="w-16 px-1 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs focus:border-blue-500 focus:outline-none"><option>GM</option><option>LT</option><option>LBS</option><option>GAL</option><option>EA</option></select>
+              <input type="number" value={newReorder} onChange={e=>setNewReorder(e.target.value)} placeholder="Reorder pt" className="w-24 px-2 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs placeholder-slate-300 focus:border-blue-500 focus:outline-none"/>
+              <button onClick={addItem} className="bg-blue-600 text-white px-3 py-2 rounded-lg"><I.Plus c="w-3.5 h-3.5"/></button>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+            <div className="p-3 border-b border-slate-100"><h2 className="text-sm font-bold text-slate-700">Inventory ({inv.length} items)</h2></div>
+            {inv.length > 0 ? <div className="divide-y divide-slate-50">{inv.map((item,i)=>{
+              const rp = item.reorderPoint || 0;
+              const isLow = rp > 0 && item.quantity <= rp;
+              const sup = getSupplier(item.name);
+              return (
+                <div key={i} className={`px-3 py-2.5 ${isLow?'bg-red-50':''}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-slate-700 truncate">{item.name}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-slate-400">{item.unit}</span>
+                        {sup && <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-medium">{sup}</span>}
+                        {rp > 0 && <span className="text-[10px] text-slate-400">Reorder: {rp.toLocaleString()}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right ml-2">
+                      <div className={`text-sm font-bold ${isLow?'text-red-600':'text-slate-700'}`}>{item.quantity.toLocaleString()}</div>
+                      {isLow && <div className="text-[9px] font-bold text-red-500">LOW STOCK</div>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}</div> : <div className="p-8 text-center text-slate-400 text-sm">No inventory loaded. Upload a file or add items manually.</div>}
+          </div>
+        </>)}
+        
+        {/* ══ LOW STOCK ALERTS ══ */}
+        {mode === 'alerts' && (<>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+            <div className="text-sm font-bold text-red-700 mb-1">⚠️ Low Stock Items ({lowStock.length})</div>
+            <div className="text-xs text-red-600">These items are at or below their reorder point. Contact the supplier to reorder.</div>
+          </div>
+          
+          {/* Group by supplier */}
+          {(() => {
+            const bySupplier = {};
+            lowStock.forEach(item => {
+              const sup = getSupplier(item.name) || 'Unknown';
+              if (!bySupplier[sup]) bySupplier[sup] = [];
+              bySupplier[sup].push(item);
+            });
+            return Object.entries(bySupplier).map(([supplier, items]) => (
+              <div key={supplier} className="bg-white rounded-xl border border-slate-100 shadow-sm mb-3">
+                <div className="p-3 border-b border-slate-100 bg-slate-50 rounded-t-xl">
+                  <div className="flex items-center justify-between">
+                    <div><div className="text-sm font-bold text-slate-700">{supplier}</div>
+                      <div className="text-[10px] text-slate-400">{SUPPLIERS.find(s=>s.name===supplier)?.category || 'Supplier'}</div>
+                    </div>
+                    <div className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{items.length} low</div>
+                  </div>
+                </div>
+                <div className="divide-y divide-slate-50">{items.map((item,i) => {
+                  const rp = item.reorderPoint || 0;
+                  const deficit = rp - item.quantity;
+                  return (
+                    <div key={i} className="px-3 py-2.5">
+                      <div className="flex items-center justify-between">
+                        <div><div className="text-xs font-semibold text-slate-700">{item.name}</div><div className="text-[10px] text-slate-400">Reorder point: {rp.toLocaleString()} {item.unit}</div></div>
+                        <div className="text-right"><div className="text-sm font-bold text-red-600">{item.quantity.toLocaleString()}</div><div className="text-[10px] text-red-500">Need {deficit.toLocaleString()}+ {item.unit}</div></div>
+                      </div>
+                    </div>
+                  );
+                })}</div>
+              </div>
+            ));
+          })()}
+          
+          {lowStock.length === 0 && (
+            <div className="text-center py-16"><div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3"><I.Check c="w-6 h-6 text-emerald-600"/></div><div className="text-sm font-bold text-emerald-700">All items above reorder points!</div><div className="text-xs text-slate-400 mt-1">No restocking needed right now.</div></div>
+          )}
+          
+          {/* Suppliers directory */}
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mt-4">
+            <h2 className="text-sm font-bold text-slate-700 mb-3">Supplier Directory</h2>
+            <div className="space-y-2">{SUPPLIERS.map(s => (
+              <div key={s.id} className="bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center justify-between"><div className="text-sm font-bold text-slate-700">{s.name}</div><span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-semibold">{s.category}</span></div>
+                <div className="text-[10px] text-slate-400 mt-1">{s.items.join(' · ')}</div>
+              </div>
+            ))}</div>
+          </div>
+        </>)}
+        
+        {/* ══ PRODUCTION FORECASTER ══ */}
+        {mode === 'forecast' && (<>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+            <div className="text-sm font-bold text-blue-700 mb-1">📊 Production Forecaster</div>
+            <div className="text-xs text-blue-600">Enter estimated unit sales per Retox flavor to see what raw materials, cups, foil seals, and boxes you'll need to order.</div>
+          </div>
+          
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4">
+            <h2 className="text-sm font-bold text-slate-700 mb-3">Projected Sales (units/cups)</h2>
+            <div className="space-y-2">{Object.entries(RECIPES).map(([id, r]) => (
+              <div key={id} className="flex items-center gap-3 bg-slate-50 rounded-lg p-2.5">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor:r.color}}/>
+                <div className="flex-1 text-xs font-semibold text-slate-700">{r.name}</div>
+                <input type="number" value={forecastUnits[id]||''} onChange={e=>{const u={...forecastUnits};u[id]=e.target.value;setForecastUnits(u);}}
+                  placeholder="0" className="w-24 px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-right font-bold focus:border-blue-500 focus:outline-none"/>
+              </div>
+            ))}</div>
+            <div className="mt-3 flex justify-between items-center">
+              <div className="text-[10px] text-slate-400">Total: {Object.values(forecastUnits).reduce((s,v)=>s+(parseInt(v)||0),0).toLocaleString()} cups</div>
+            </div>
+          </div>
+          
+          {/* Forecast results */}
+          {Object.values(forecastUnits).some(v=>parseInt(v)>0) && (()=>{
+            const needs = calcForecast();
+            // Group by category
+            const ingredients = {};
+            const packaging = {};
+            Object.entries(needs).forEach(([name, d]) => {
+              if (name.includes('Cup') || name.includes('Foil') || name.includes('Crown') || name.includes('Box')) {
+                packaging[name] = d;
+              } else {
+                ingredients[name] = d;
+              }
+            });
+            
+            return (<>
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm mb-3">
+                <div className="p-3 border-b border-slate-100"><h2 className="text-sm font-bold text-slate-700">Raw Materials Needed</h2></div>
+                <div className="divide-y divide-slate-50">{Object.entries(ingredients).map(([name, d]) => {
+                  const onHand = inv.find(i => i.name.includes(name) || name.includes(i.name))?.quantity || 0;
+                  const shortage = d.amount - onHand;
+                  const sup = getSupplier(name);
+                  return (
+                    <div key={name} className="px-3 py-2.5">
+                      <div className="flex items-center justify-between">
+                        <div><div className="text-xs font-semibold text-slate-700">{name}</div>{sup && <span className="text-[10px] text-slate-400">{sup}</span>}</div>
+                        <div className="text-right">
+                          <div className="text-xs font-bold text-slate-700">{d.amount.toFixed(1)} {d.unit}</div>
+                          {shortage > 0 ? <div className="text-[9px] font-bold text-red-500">Short {shortage.toFixed(1)}</div> :
+                           onHand > 0 && <div className="text-[9px] text-emerald-600">✓ In stock</div>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}</div>
+              </div>
+              
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm mb-3">
+                <div className="p-3 border-b border-slate-100"><h2 className="text-sm font-bold text-slate-700">Packaging Needed</h2></div>
+                <div className="divide-y divide-slate-50">{Object.entries(packaging).map(([name, d]) => {
+                  const onHand = inv.find(i => i.name === name)?.quantity || 0;
+                  const shortage = d.amount - onHand;
+                  const sup = getSupplier(name);
+                  return (
+                    <div key={name} className="px-3 py-2.5">
+                      <div className="flex items-center justify-between">
+                        <div><div className="text-xs font-semibold text-slate-700">{name}</div>{sup && <span className="text-[10px] text-slate-400">{sup}</span>}</div>
+                        <div className="text-right">
+                          <div className="text-xs font-bold text-slate-700">{Math.ceil(d.amount).toLocaleString()} {d.unit}</div>
+                          {shortage > 0 ? <div className="text-[9px] font-bold text-red-500">Short {Math.ceil(shortage).toLocaleString()}</div> :
+                           onHand > 0 && <div className="text-[9px] text-emerald-600">✓ In stock</div>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}</div>
+              </div>
+              
+              {/* Order summary by supplier */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="text-sm font-bold text-amber-700 mb-2">📋 Order Summary by Supplier</div>
+                {(()=>{
+                  const bySup = {};
+                  Object.entries({...ingredients,...packaging}).forEach(([name, d]) => {
+                    const onHand = inv.find(i => i.name === name || i.name.includes(name) || name.includes(i.name))?.quantity || 0;
+                    const shortage = d.amount - onHand;
+                    if (shortage > 0) {
+                      const sup = getSupplier(name) || 'Other';
+                      if (!bySup[sup]) bySup[sup] = [];
+                      bySup[sup].push({ name, need: d.unit === 'EA' ? Math.ceil(shortage) : parseFloat(shortage.toFixed(1)), unit: d.unit });
+                    }
+                  });
+                  if (Object.keys(bySup).length === 0) return <div className="text-xs text-emerald-600 font-semibold">✓ All materials in stock — no orders needed!</div>;
+                  return Object.entries(bySup).map(([sup, items]) => (
+                    <div key={sup} className="mb-2">
+                      <div className="text-xs font-bold text-amber-800 mb-1">{sup}:</div>
+                      {items.map((i,idx) => <div key={idx} className="text-[10px] text-amber-700 ml-3">• {i.name}: {i.need.toLocaleString()} {i.unit}</div>)}
+                    </div>
+                  ));
+                })()}
+              </div>
+            </>);
+          })()}
+        </>)}
+        
+        {/* ══ INVENTORY COUNT ══ */}
+        {mode === 'count' && (<>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <div className="text-sm font-bold text-amber-700 mb-1">Inventory Count in Progress</div>
+            <div className="text-xs text-amber-600">Go through each item. Enter the actual count beside the expected quantity.</div>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+            <div className="divide-y divide-slate-50">
+              {Object.entries(countData).map(([name, d]) => (
+                <div key={name} className="px-3 py-2.5">
+                  <div className="text-xs font-semibold text-slate-700 mb-1.5">{name} <span className="text-slate-400">({d.unit})</span></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><div className="text-[10px] text-slate-400 uppercase mb-0.5">Expected</div><div className="text-sm font-bold text-slate-600">{d.expected.toLocaleString()}</div></div>
+                    <div><div className="text-[10px] text-slate-400 uppercase mb-0.5">Actual Count</div><input type="number" value={d.actual} onChange={e=>{const u={...countData};u[name]={...d,actual:e.target.value};setCountData(u);}} placeholder="0" className="w-full px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-sm font-bold focus:border-blue-500 focus:outline-none"/></div>
+                  </div>
+                  {d.actual !== '' && (()=>{
+                    const variance = parseFloat(d.actual) - d.expected;
+                    return variance !== 0 ? <div className={`text-[10px] font-semibold mt-1 ${variance>0?'text-emerald-600':'text-red-500'}`}>{variance>0?'+':''}{variance.toLocaleString()} {d.unit} variance</div> : null;
+                  })()}
+                </div>
+              ))}
+            </div>
+            <div className="p-3 border-t border-slate-100">
+              <button onClick={saveCount} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm">Save Inventory Count</button>
+            </div>
+          </div>
+        </>)}
+        
+        {/* ══ COUNT REPORTS ══ */}
+        {mode === 'reports' && (<>
+          <div className="space-y-3">{reports.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>(
+            <div key={r.id} className="bg-white rounded-xl border border-slate-100 shadow-sm">
+              <div className="p-3 border-b border-slate-100"><div className="text-xs font-bold text-slate-700">{new Date(r.date).toLocaleDateString()} {new Date(r.date).toLocaleTimeString()}</div><div className="text-[10px] text-slate-400">Counted by {r.countedBy}</div></div>
+              <div className="divide-y divide-slate-50">{r.items.filter(i=>i.variance!==0).map((i,idx)=>(
+                <div key={idx} className="px-3 py-2 flex items-center justify-between">
+                  <div className="text-xs text-slate-600">{i.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400">Exp: {i.expected}</span>
+                    <span className="text-[10px] text-slate-400">Act: {i.actual}</span>
+                    <span className={`text-[10px] font-bold ${i.variance>0?'text-emerald-600':'text-red-500'}`}>{i.variance>0?'+':''}{i.variance}</span>
+                  </div>
+                </div>
+              ))}{r.items.filter(i=>i.variance!==0).length===0&&<div className="px-3 py-2 text-xs text-emerald-600">No variances — perfect count!</div>}</div>
+            </div>
+          ))}{reports.length===0&&<div className="text-center py-16 text-slate-400 text-sm">No inventory count reports yet</div>}</div>
+        </>)}
+      </div></div><Nav/></>);
+    };
+    return <Inv/>;
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     COPA PRODUCTION (Placeholder)
+     ═══════════════════════════════════════════════════ */
+  if (view === 'copa-home' && isMgr) {
+    const CopaHome = () => {
+      const [showCreate, setShowCreate] = useState(false);
+      const [product, setProduct] = useState('');
+      const [qty, setQty] = useState('');
+      const [asgn, setAsgn] = useState('');
+      const create = () => {
+        const w = { id:`COPA-${Date.now()}`, product, quantity:parseInt(qty), assignee:asgn, status:'pending', deleted:false, createdAt:new Date().toISOString() };
+        SS.saveGenericWO('copa', w); refresh(); setShowCreate(false); setProduct(''); setQty(''); setAsgn('');
+      };
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-6">
+        <button onClick={()=>setView('widgets')} className="text-xs text-slate-400 hover:text-blue-600 mb-2">← Back to Products</button>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-sm"><I.Wine c="w-5 h-5 text-white"/></div>
+          <div><h1 className="text-2xl font-extrabold text-slate-800">Copa Production</h1><p className="text-xs text-slate-400">Bottling Work Orders</p></div>
+        </div>
+        
+        {isMgr && !showCreate && <button onClick={()=>setShowCreate(true)} className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-rose-500/20 transition-all text-sm mb-5">+ Create Bottling Order</button>}
+        
+        {showCreate && (<div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm mb-5 fade-in">
+          <h3 className="text-sm font-bold text-slate-700 mb-3">New Copa Bottling Order</h3>
+          <div className="space-y-3">
+            <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Product</label><input type="text" value={product} onChange={e=>setProduct(e.target.value)} placeholder="e.g., Copa Chardonnay 375ml" className="w-full px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-rose-500 focus:outline-none"/></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Quantity</label><input type="number" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0" className="w-full px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-rose-500 focus:outline-none"/></div>
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Assign To</label><input type="text" value={asgn} onChange={e=>setAsgn(e.target.value)} placeholder="Name" className="w-full px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-rose-500 focus:outline-none"/></div>
+            </div>
+            <div className="flex gap-2"><button onClick={create} disabled={!product||!qty||!asgn} className="flex-1 bg-rose-500 text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40">Create</button><button onClick={()=>setShowCreate(false)} className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-500 bg-slate-100">Cancel</button></div>
+          </div>
+        </div>)}
+        
+        <div className="space-y-3">{copaOrders.filter(o=>!o.deleted).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(o=>(
+          <div key={o.id} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm"><div className="flex items-center justify-between mb-1"><span className="font-mono text-xs text-rose-400">{o.id}</span><Badge s={o.status}/></div><div className="text-sm font-bold text-slate-800">{o.product}</div><div className="text-xs text-slate-400">{o.quantity} units · {o.assignee} · {new Date(o.createdAt).toLocaleDateString()}</div></div>
+        ))}{copaOrders.filter(o=>!o.deleted).length===0&&<div className="text-center py-16"><I.Wine c="w-10 h-10 mx-auto mb-3 text-slate-300"/><div className="text-slate-400 text-sm">No Copa orders yet</div></div>}</div>
+      </div></div><Nav/></>);
+    };
+    return <CopaHome/>;
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     OREGON MOUNTAIN (Placeholder)
+     ═══════════════════════════════════════════════════ */
+  if (view === 'oregon-home' && isMgr) {
+    const OregonHome = () => {
+      const [showCreate, setShowCreate] = useState(false);
+      const [product, setProduct] = useState('');
+      const [qty, setQty] = useState('');
+      const [asgn, setAsgn] = useState('');
+      const create = () => {
+        const w = { id:`OM-${Date.now()}`, product, quantity:parseInt(qty), assignee:asgn, status:'pending', deleted:false, createdAt:new Date().toISOString() };
+        SS.saveGenericWO('oregon', w); refresh(); setShowCreate(false); setProduct(''); setQty(''); setAsgn('');
+      };
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-6">
+        <button onClick={()=>setView('widgets')} className="text-xs text-slate-400 hover:text-blue-600 mb-2">← Back to Products</button>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 flex items-center justify-center shadow-sm"><I.Mountain c="w-5 h-5 text-white"/></div>
+          <div><h1 className="text-2xl font-extrabold text-slate-800">Oregon Mountain</h1><p className="text-xs text-slate-400">Bottling Work Orders</p></div>
+        </div>
+        
+        {isMgr && !showCreate && <button onClick={()=>setShowCreate(true)} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-600/20 transition-all text-sm mb-5">+ Create Bottling Order</button>}
+        
+        {showCreate && (<div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm mb-5 fade-in">
+          <h3 className="text-sm font-bold text-slate-700 mb-3">New Oregon Mountain Order</h3>
+          <div className="space-y-3">
+            <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Product</label><input type="text" value={product} onChange={e=>setProduct(e.target.value)} placeholder="e.g., Oregon Mountain Pinot Noir" className="w-full px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-emerald-500 focus:outline-none"/></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Quantity</label><input type="number" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0" className="w-full px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-emerald-500 focus:outline-none"/></div>
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Assign To</label><input type="text" value={asgn} onChange={e=>setAsgn(e.target.value)} placeholder="Name" className="w-full px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-emerald-500 focus:outline-none"/></div>
+            </div>
+            <div className="flex gap-2"><button onClick={create} disabled={!product||!qty||!asgn} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40">Create</button><button onClick={()=>setShowCreate(false)} className="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-500 bg-slate-100">Cancel</button></div>
+          </div>
+        </div>)}
+        
+        <div className="space-y-3">{oregonOrders.filter(o=>!o.deleted).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(o=>(
+          <div key={o.id} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm"><div className="flex items-center justify-between mb-1"><span className="font-mono text-xs text-emerald-500">{o.id}</span><Badge s={o.status}/></div><div className="text-sm font-bold text-slate-800">{o.product}</div><div className="text-xs text-slate-400">{o.quantity} units · {o.assignee} · {new Date(o.createdAt).toLocaleDateString()}</div></div>
+        ))}{oregonOrders.filter(o=>!o.deleted).length===0&&<div className="text-center py-16"><I.Mountain c="w-10 h-10 mx-auto mb-3 text-slate-300"/><div className="text-slate-400 text-sm">No Oregon Mountain orders yet</div></div>}</div>
+      </div></div><Nav/></>);
+    };
+    return <OregonHome/>;
+  }
+  
+  /* ═══════════════════════════════════════════════════
+     OREGON ORGANIC — Screen Printing + Cup Flow
+     ═══════════════════════════════════════════════════ */
+  if (view === 'screen-home' && isMgr) {
+    const ScreenHome = () => {
+      const [tab, setTab] = useState('print'); // print | downstairs | transfer | eod | sales
+      const [showCreate, setShowCreate] = useState(false);
+      const [brand, setBrand] = useState('retox');
+      const [cupType, setCupType] = useState('');
+      const [qty, setQty] = useState('');
+      const [asgn, setAsgn] = useState('');
+      
+      // ── Print Order Create ──
+      const createPrintOrder = () => {
+        const cup = ALL_PRINTABLE_CUPS.find(c => c.id === cupType);
+        const w = {
+          id:`SP-${Date.now()}`, brand: cup.brand, cupType: cup.id, cupName: cup.name, cupColor: cup.color,
+          quantity: parseInt(qty), assignee: asgn, status: 'pending', deleted: false,
+          createdAt: new Date().toISOString(), completedAt: null, printedQty: 0,
+        };
+        SS.saveGenericWO('screen', w); refresh(); setShowCreate(false); setCupType(''); setQty(''); setAsgn('');
+      };
+      
+      // ── Complete Print Order → adds to downstairs stock ──
+      const completePrint = (order) => {
+        const qty = order.printedQty || order.quantity;
+        const updated = {...order, status: 'completed', completedAt: new Date().toISOString(), printedQty: qty};
+        SS.updateGenericWO('screen', updated);
+        // Add to downstairs printed stock
+        const stock = SS.printedStock();
+        const existing = stock.find(s => s.cupType === order.cupType);
+        if (existing) {
+          existing.quantity += qty;
+          existing.lastPrinted = new Date().toISOString();
+        } else {
+          stock.push({ cupType: order.cupType, cupName: order.cupName, cupColor: order.cupColor, brand: order.brand, quantity: qty, lastPrinted: new Date().toISOString() });
+        }
+        SS.savePrintedStock(stock);
+        // Save print log
+        SS.savePrintLog({ id: Date.now(), date: new Date().toISOString(), orderId: order.id, cupType: order.cupType, cupName: order.cupName, brand: order.brand, quantity: qty, printer: user.name });
+        refresh();
+      };
+      
+      // ── Transfer cups upstairs (sale order) ──
+      const [txCup, setTxCup] = useState('');
+      const [txQty, setTxQty] = useState('');
+      const [txBuyer, setTxBuyer] = useState('');
+      const [txNotes, setTxNotes] = useState('');
+      
+      const createTransfer = () => {
+        const stock = SS.printedStock();
+        const item = stock.find(s => s.cupType === txCup);
+        if (!item || parseInt(txQty) > item.quantity) { alert('Not enough cups in downstairs stock!'); return; }
+        const cup = ALL_PRINTABLE_CUPS.find(c => c.id === txCup);
+        const transfer = {
+          id: `TX-${Date.now()}`, cupType: txCup, cupName: cup?.name || item.cupName, cupColor: item.cupColor, brand: item.brand,
+          quantity: parseInt(txQty), soldTo: txBuyer, notes: txNotes,
+          date: new Date().toISOString(), movedBy: user.name,
+        };
+        SS.saveTransfer(transfer);
+        // Deduct from downstairs stock
+        item.quantity -= parseInt(txQty);
+        SS.savePrintedStock(stock);
+        refresh(); setTxCup(''); setTxQty(''); setTxBuyer(''); setTxNotes('');
+      };
+      
+      // ── End of Day Report ──
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todaysLogs = printLogs.filter(l => l.date.startsWith(todayStr));
+      const todaysTransfers = cupTransfers.filter(t => t.date.startsWith(todayStr));
+      
+      // Group today's prints by cup type
+      const todayPrintSummary = {};
+      todaysLogs.forEach(l => {
+        if (!todayPrintSummary[l.cupName]) todayPrintSummary[l.cupName] = { qty: 0, brand: l.brand, color: l.cupColor || '#6366f1' };
+        todayPrintSummary[l.cupName].qty += l.quantity;
+      });
+      const todayTotalPrinted = Object.values(todayPrintSummary).reduce((s,v) => s + v.qty, 0);
+      
+      // Group today's transfers by buyer
+      const todayTransferSummary = {};
+      todaysTransfers.forEach(t => {
+        if (!todayTransferSummary[t.soldTo]) todayTransferSummary[t.soldTo] = { qty: 0, items: [] };
+        todayTransferSummary[t.soldTo].qty += t.quantity;
+        todayTransferSummary[t.soldTo].items.push(t);
+      });
+      
+      // All-time transfer report grouped by buyer
+      const allTransfersByBuyer = {};
+      cupTransfers.forEach(t => {
+        if (!allTransfersByBuyer[t.soldTo]) allTransfersByBuyer[t.soldTo] = { qty: 0, items: [] };
+        allTransfersByBuyer[t.soldTo].qty += t.quantity;
+        allTransfersByBuyer[t.soldTo].items.push(t);
+      });
+      
+      const filteredBrands = brand === 'all' ? ALL_PRINTABLE_CUPS : ALL_PRINTABLE_CUPS.filter(c => c.brand.toLowerCase().replace(/\s/g,'') === brand);
+      
+      return (<><Hdr/><div className="min-h-screen bg-slate-50 pb-24"><div className="max-w-md mx-auto px-4 pt-6">
+        <button onClick={()=>setView('widgets')} className="text-xs text-slate-400 hover:text-blue-600 mb-2">← Back to Products</button>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-violet-700 flex items-center justify-center shadow-sm"><I.Printer c="w-5 h-5 text-white"/></div>
+          <div><h1 className="text-xl font-extrabold text-slate-800">Oregon Organic</h1><p className="text-[10px] text-slate-400">Screen Printing · Cup Transfers · Sales</p></div>
+        </div>
+        
+        {/* Tabs */}
+        <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+          {[
+            {id:'print', label:'🖨️ Print', n: screenOrders.filter(o=>!o.deleted&&o.status==='pending').length},
+            {id:'downstairs', label:'⬇️ Downstairs', n: printedStock.reduce((s,i)=>s+i.quantity,0)},
+            {id:'transfer', label:'⬆️ Transfer'},
+            {id:'eod', label:'📋 EOD Report'},
+            {id:'sales', label:'💰 Sales Log'},
+          ].map(t => (
+            <button key={t.id} onClick={()=>setTab(t.id)} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${tab===t.id?'bg-violet-600 text-white':'bg-white text-slate-500 border border-slate-200'}`}>
+              {t.label}{t.n > 0 ? ` (${t.n})` : ''}
+            </button>
+          ))}
+        </div>
+        
+        {/* ══ PRINT ORDERS TAB ══ */}
+        {tab === 'print' && (<>
+          {isMgr && !showCreate && <button onClick={()=>setShowCreate(true)} className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-violet-600/20 transition-all text-sm mb-4">+ Create Print Order</button>}
+          
+          {showCreate && (<div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4 fade-in">
+            <h3 className="text-sm font-bold text-slate-700 mb-3">New Print Order</h3>
+            <div className="space-y-3">
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Brand</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['retox','copa','oregonmountain'].map(b=>(<button key={b} onClick={()=>{setBrand(b);setCupType('');}} className={`p-2 rounded-lg text-[11px] font-semibold transition-all ${brand===b?'bg-violet-500 text-white':'bg-slate-100 text-slate-500'}`}>{b==='oregonmountain'?'OR Mountain':b==='copa'?'Copa':'Retox'}</button>))}
+                </div>
+              </div>
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Cup Design</label>
+                <div className="space-y-1">{filteredBrands.map(c=>(
+                  <button key={c.id} onClick={()=>setCupType(c.id)} className={`w-full p-2 rounded-lg text-left text-xs transition-all flex items-center gap-2 ${cupType===c.id?'bg-violet-50 border-2 border-violet-500':'bg-slate-50 border border-slate-200'}`}>
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{backgroundColor:c.color}}/><span className="font-semibold text-slate-700">{c.name}</span>
+                  </button>
+                ))}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Quantity</label><input type="number" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0" className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-violet-500 focus:outline-none"/></div>
+                <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Assign To</label><input type="text" value={asgn} onChange={e=>setAsgn(e.target.value)} placeholder="Name" className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-violet-500 focus:outline-none"/></div>
+              </div>
+              <div className="flex gap-2"><button onClick={createPrintOrder} disabled={!cupType||!qty||!asgn} className="flex-1 bg-violet-600 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-40">Create</button><button onClick={()=>setShowCreate(false)} className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-500 bg-slate-100">Cancel</button></div>
+            </div>
+          </div>)}
+          
+          {/* Pending orders */}
+          <div className="mb-2"><h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Print Queue</h2></div>
+          <div className="space-y-2">{screenOrders.filter(o=>!o.deleted&&o.status==='pending').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(o=>(
+            <div key={o.id} className="bg-white rounded-xl p-3.5 border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between mb-1"><span className="font-mono text-[10px] text-violet-500">{o.id}</span><Badge s={o.status}/></div>
+              <div className="flex items-center gap-2 mb-1"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:o.cupColor}}/><span className="text-sm font-bold text-slate-800">{o.cupName}</span></div>
+              <div className="text-xs text-slate-400 mb-2">{o.quantity.toLocaleString()} cups · {o.assignee}</div>
+              <button onClick={()=>completePrint(o)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg text-xs transition-all">✓ Mark Printed → Move to Downstairs</button>
+            </div>
+          ))}</div>
+          
+          {/* Completed today */}
+          {todaysLogs.length > 0 && (<div className="mt-4"><div className="mb-2"><h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Completed Today</h2></div>
+            <div className="space-y-1.5">{screenOrders.filter(o=>!o.deleted&&o.status==='completed'&&o.completedAt?.startsWith(todayStr)).map(o=>(
+              <div key={o.id} className="bg-emerald-50 rounded-lg p-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{backgroundColor:o.cupColor}}/><span className="text-xs font-semibold text-slate-700">{o.cupName}</span></div>
+                <span className="text-xs font-bold text-emerald-600">{o.quantity.toLocaleString()}</span>
+              </div>
+            ))}</div>
+          </div>)}
+          
+          {screenOrders.filter(o=>!o.deleted).length===0&&<div className="text-center py-12"><I.Printer c="w-8 h-8 mx-auto mb-2 text-slate-300"/><div className="text-slate-400 text-xs">No print orders yet</div></div>}
+        </>)}
+        
+        {/* ══ DOWNSTAIRS INVENTORY ══ */}
+        {tab === 'downstairs' && (<>
+          <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 mb-4">
+            <div className="text-xs font-bold text-violet-700">⬇️ Printed Cups — Sitting Downstairs</div>
+            <div className="text-[10px] text-violet-500 mt-0.5">These cups have been printed and are waiting to be transferred upstairs and sold to a brand.</div>
+          </div>
+          
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
+            {printedStock.length > 0 && printedStock.some(s=>s.quantity>0) ? (
+              <div className="divide-y divide-slate-50">{printedStock.filter(s=>s.quantity>0).map((item,i)=>(
+                <div key={i} className="px-3 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{backgroundColor:item.cupColor}}/><div><div className="text-xs font-bold text-slate-800">{item.cupName}</div><div className="text-[10px] text-slate-400">{item.brand} · Last printed {new Date(item.lastPrinted).toLocaleDateString()}</div></div></div>
+                    <div className="text-right"><div className="text-lg font-extrabold text-violet-600">{item.quantity.toLocaleString()}</div><div className="text-[9px] text-slate-400">cups</div></div>
+                  </div>
+                </div>
+              ))}</div>
+            ) : (
+              <div className="p-8 text-center"><I.Cup c="w-8 h-8 mx-auto mb-2 text-slate-300"/><div className="text-xs text-slate-400">No printed cups downstairs</div></div>
+            )}
+          </div>
+          
+          <div className="mt-3 bg-slate-50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-extrabold text-slate-800">{printedStock.reduce((s,i)=>s+i.quantity,0).toLocaleString()}</div>
+            <div className="text-[10px] text-slate-400 font-semibold">Total cups awaiting transfer</div>
+          </div>
+        </>)}
+        
+        {/* ══ TRANSFER / SALE ORDER ══ */}
+        {tab === 'transfer' && (<>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+            <div className="text-xs font-bold text-amber-700">⬆️ Transfer Cups Upstairs</div>
+            <div className="text-[10px] text-amber-600 mt-0.5">Move printed cups from downstairs to a brand. This creates a sale order.</div>
+          </div>
+          
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4">
+            <h3 className="text-sm font-bold text-slate-700 mb-3">New Transfer / Sale Order</h3>
+            <div className="space-y-3">
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Select Cups (from downstairs)</label>
+                <div className="space-y-1.5">{printedStock.filter(s=>s.quantity>0).map(s=>(
+                  <button key={s.cupType} onClick={()=>setTxCup(s.cupType)} className={`w-full p-2.5 rounded-lg text-left text-xs transition-all flex items-center justify-between ${txCup===s.cupType?'bg-violet-50 border-2 border-violet-500':'bg-slate-50 border border-slate-200'}`}>
+                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{backgroundColor:s.cupColor}}/><span className="font-semibold text-slate-700">{s.cupName}</span></div>
+                    <span className="text-[10px] font-bold text-violet-600">{s.quantity.toLocaleString()} avail</span>
+                  </button>
+                ))}</div>
+                {printedStock.filter(s=>s.quantity>0).length===0 && <div className="text-xs text-slate-400 text-center py-3">No cups available downstairs</div>}
+              </div>
+              
+              <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sold To (Brand)</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['Retox','Copa','Oregon Mountain'].map(b=>(
+                    <button key={b} onClick={()=>setTxBuyer(b)} className={`p-2 rounded-lg text-[11px] font-semibold transition-all ${txBuyer===b?'bg-emerald-500 text-white':'bg-slate-100 text-slate-500'}`}>{b}</button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Quantity</label>
+                  <input type="number" value={txQty} onChange={e=>setTxQty(e.target.value)} placeholder="0" className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-emerald-500 focus:outline-none"/>
+                  {txCup && <div className="text-[10px] text-slate-400 mt-0.5">Max: {(printedStock.find(s=>s.cupType===txCup)?.quantity||0).toLocaleString()}</div>}
+                </div>
+                <div><label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Notes</label>
+                  <input type="text" value={txNotes} onChange={e=>setTxNotes(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:border-emerald-500 focus:outline-none"/>
+                </div>
+              </div>
+              
+              <button onClick={createTransfer} disabled={!txCup||!txQty||!txBuyer} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-40 transition-all flex items-center justify-center gap-2">
+                <I.ArrowUp c="w-4 h-4"/> Transfer Upstairs & Create Sale Order
+              </button>
+            </div>
+          </div>
+          
+          {/* Recent transfers */}
+          {cupTransfers.length > 0 && (<>
+            <div className="mb-2"><h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Recent Transfers</h2></div>
+            <div className="space-y-1.5">{cupTransfers.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10).map(t=>(
+              <div key={t.id} className="bg-white rounded-lg p-3 border border-slate-100 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{backgroundColor:t.cupColor}}/><span className="text-xs font-bold text-slate-700">{t.cupName}</span></div>
+                    <div className="text-[10px] text-slate-400 mt-0.5"><span className="font-semibold text-emerald-600">→ {t.soldTo}</span> · {t.movedBy} · {new Date(t.date).toLocaleDateString()} {new Date(t.date).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+                  </div>
+                  <div className="text-sm font-extrabold text-slate-700">{t.quantity.toLocaleString()}</div>
+                </div>
+              </div>
+            ))}</div>
+          </>)}
+        </>)}
+        
+        {/* ══ END OF DAY REPORT ══ */}
+        {tab === 'eod' && (<>
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-slate-700">📋 End of Day — {new Date().toLocaleDateString()}</h2>
+            </div>
+            
+            {/* Printed today */}
+            <div className="mb-4">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Cups Printed Today</div>
+              {Object.keys(todayPrintSummary).length > 0 ? (
+                <div className="space-y-1.5">
+                  {Object.entries(todayPrintSummary).map(([name, d]) => (
+                    <div key={name} className="flex items-center justify-between bg-violet-50 rounded-lg p-2.5">
+                      <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:d.color}}/><span className="text-xs font-semibold text-slate-700">{name}</span><span className="text-[10px] text-slate-400">({d.brand})</span></div>
+                      <span className="text-sm font-extrabold text-violet-600">{d.qty.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between bg-violet-100 rounded-lg p-2.5 mt-1">
+                    <span className="text-xs font-bold text-violet-700">TOTAL PRINTED</span>
+                    <span className="text-lg font-extrabold text-violet-700">{todayTotalPrinted.toLocaleString()}</span>
+                  </div>
+                </div>
+              ) : (<div className="text-xs text-slate-400 text-center py-4">No cups printed today</div>)}
+            </div>
+            
+            {/* Transferred today */}
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Cups Transferred Upstairs Today</div>
+              {Object.keys(todayTransferSummary).length > 0 ? (
+                <div className="space-y-1.5">
+                  {Object.entries(todayTransferSummary).map(([buyer, d]) => (
+                    <div key={buyer}>
+                      <div className="flex items-center justify-between bg-emerald-50 rounded-lg p-2.5">
+                        <span className="text-xs font-bold text-emerald-700">→ {buyer}</span>
+                        <span className="text-sm font-extrabold text-emerald-600">{d.qty.toLocaleString()} cups</span>
+                      </div>
+                      <div className="ml-3 mt-1 space-y-0.5">{d.items.map(t=>(
+                        <div key={t.id} className="text-[10px] text-slate-400 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor:t.cupColor}}/>{t.cupName}: {t.quantity.toLocaleString()}</div>
+                      ))}</div>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between bg-emerald-100 rounded-lg p-2.5 mt-1">
+                    <span className="text-xs font-bold text-emerald-700">TOTAL TRANSFERRED</span>
+                    <span className="text-lg font-extrabold text-emerald-700">{todaysTransfers.reduce((s,t)=>s+t.quantity,0).toLocaleString()}</span>
+                  </div>
+                </div>
+              ) : (<div className="text-xs text-slate-400 text-center py-4">No transfers today</div>)}
+            </div>
+          </div>
+          
+          {/* Still downstairs */}
+          <div className="bg-slate-50 rounded-lg p-3 text-center">
+            <div className="text-xs font-bold text-slate-500 mb-1">Still Downstairs</div>
+            <div className="text-2xl font-extrabold text-slate-800">{printedStock.reduce((s,i)=>s+i.quantity,0).toLocaleString()}</div>
+            <div className="text-[10px] text-slate-400">cups awaiting transfer</div>
+          </div>
+        </>)}
+        
+        {/* ══ SALES LOG (All Transfers) ══ */}
+        {tab === 'sales' && (<>
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm mb-4">
+            <h2 className="text-sm font-bold text-slate-700 mb-3">💰 Cup Sales / Transfers — All Time</h2>
+            
+            {/* Summary by buyer */}
+            {Object.keys(allTransfersByBuyer).length > 0 ? (<>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {['Retox','Copa','Oregon Mountain'].map(b => {
+                  const d = allTransfersByBuyer[b];
+                  const colors = {Retox:'blue',Copa:'rose','Oregon Mountain':'emerald'};
+                  const c = colors[b] || 'slate';
+                  return (
+                    <div key={b} className={`bg-${c}-50 rounded-lg p-3 text-center`}>
+                      <div className={`text-xl font-extrabold text-${c}-600`}>{(d?.qty||0).toLocaleString()}</div>
+                      <div className={`text-[9px] font-bold text-${c}-500`}>{b}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Full log */}
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Transfer History</div>
+              <div className="space-y-1.5 max-h-96 overflow-y-auto">{cupTransfers.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>(
+                <div key={t.id} className="bg-slate-50 rounded-lg p-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5"><span className="font-mono text-[9px] text-slate-400">{t.id}</span></div>
+                      <div className="flex items-center gap-1.5 mt-0.5"><div className="w-2 h-2 rounded-full" style={{backgroundColor:t.cupColor}}/><span className="text-[11px] font-semibold text-slate-700">{t.cupName}</span></div>
+                      <div className="text-[10px] text-slate-400">→ <span className="font-semibold text-emerald-600">{t.soldTo}</span> · {t.movedBy} · {new Date(t.date).toLocaleDateString()}</div>
+                      {t.notes && <div className="text-[10px] text-slate-400 italic">"{t.notes}"</div>}
+                    </div>
+                    <div className="text-sm font-extrabold text-slate-700">{t.quantity.toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}</div>
+            </>) : (<div className="text-center py-8 text-slate-400 text-xs">No transfers recorded yet</div>)}
+          </div>
+        </>)}
+        
+      </div></div><Nav/></>);
+    };
+    return <ScreenHome/>;
+  }
+  
+  // Fallback redirect
+  if (!isMgr && ['dashboard','costs','inventory','history','qc-queue','create','qc-testing','copa-home','oregon-home','screen-home'].includes(view)) { setView('widgets'); }
+  return null;
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>
